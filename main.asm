@@ -1,6 +1,4 @@
-	.data
-
-	.text
+.text
 	.globl main
 	
 	#the engine for the turned based program
@@ -8,3 +6,4 @@
 
 main:
 	#and so it begins
+	j engineSetup

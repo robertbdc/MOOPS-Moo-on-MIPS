@@ -53,7 +53,7 @@ checkForGameEnd:
 	lw $t1, 0($t0)
 	la $t0, maxTurns
 	lw $t2, 0($t0)
-	beq $t1, 0, gameDidNotEnd
+	beq $t2, 0, gameDidNotEnd
 	beq $t1, $t2, gameEnded
 gameDidNotEnd: 
 	li $v0, 0

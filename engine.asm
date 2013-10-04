@@ -48,6 +48,8 @@ doEndTurn:
 	j gameLoop
 #Stores result in $v0
 #Returns 0 for false, 1 for true
+
+#https://gist.github.com/mlohstroh/dbc2d5a13db11c7c3d97
 checkForGameEnd:
 	la $t0, turnNumber
 	lw $t1, 0($t0)

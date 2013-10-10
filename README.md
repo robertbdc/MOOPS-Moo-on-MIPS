@@ -42,6 +42,7 @@ function to convert number to hex representation
 1. check for win function
   * if number of bulls = 4, win game 
 2. might help if we had helper for input of digits, to make code more readable, etc.       
+3. function to save return address(push it onto the stack?)
         
 Variables 
 ----------

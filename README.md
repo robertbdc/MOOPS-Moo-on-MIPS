@@ -34,13 +34,14 @@ Functions
 2. function(s) which takes the guessed numbers and the number of cows and bulls in previous guess to make a guess 
     
 ###In general:
-1. function to convert number to hex representation
+function to convert number to hex representation
   * eg. if we store generated numbers as integers, convert 12 to C before being output
   * is this even needed?  if we store the numbers as ascii codes then we can just print out the numbers directly.
     this would save memory because we would be storing the number in 1 4 byte word instead of 4.
-2. check for win function
+  * this isn't needed, because there is a sycall to print an integer as a hex ($v0 = 34, $a0 = int to print)
+1. check for win function
   * if number of bulls = 4, win game 
-3. might help if we had helper for input of digits        
+2. might help if we had helper for input of digits, to make code more readable, etc.       
         
 Variables 
 ----------

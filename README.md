@@ -71,6 +71,9 @@ Stuff we need to define:
   1. the user tries to guess the number before a set amount of turns and maybe a set amount of time.
     what about when it is the computer's turn?  It would be pretty lame if you just had to see how many cows and bulls a random number from a computer had, but what else could they do? 
   2. the user alternates turns with the computer trying to see who can guess the number first.  you guess at the computer's number and then they guess at yours in a head to head showdown to the death.  this adds a sense of competitition, making the game a little more interesting.
-  
+4. Stack usage 
+  * are we going to be needing to store anything other than 4 bytes in the stack?  If so we would need some kind of data structure in the stack.
+  * Solution:always have an int on the top of the stack which represents how big the next item is in the stack.
+    This will increase memory usage by 4 kbytes for everything on the stack, so that kind of sucks.
        
   

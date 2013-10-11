@@ -34,16 +34,14 @@ Functions
 2. function(s) which takes the guessed numbers and the number of cows and bulls in previous guess to make a guess 
     
 ###In general:
-function to convert number to hex representation
-  * eg. if we store generated numbers as integers, convert 12 to C before being output
-  * is this even needed?  if we store the numbers as ascii codes then we can just print out the numbers directly.
-    this would save memory because we would be storing the number in 1 4 byte word instead of 4.
-  * this isn't needed, because there is a sycall to print an integer as a hex ($v0 = 34, $a0 = int to print)
 1. check for win function
   * if number of bulls = 4, win game 
 2. might help if we had helper for input of digits, to make code more readable, etc.       
 3. function to save return address(push it onto the stack?)
-        
+4. helper functions for stack operations.  For push: decrement $sp by the amount of bytes needed to store whatever is going into the stack.
+Then save thing in word located at address in $sp.
+For pop: if ($sp === $fp){ error:cannot pop empty stack}; else increment $sp by the size in bytes of the thing stored in the stack.
+
 Variables 
 ----------
 1. score

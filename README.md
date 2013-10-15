@@ -41,6 +41,7 @@ Functions
 4. helper functions for stack operations.  For push: decrement $sp by the amount of bytes needed to store whatever is going into the stack.
 Then save thing in word located at address in $sp.
 For pop: if ($sp === $fp){ error:cannot pop empty stack}; else increment $sp by the size in bytes of the thing stored in the stack.
+5. fucntion to convert between in and hex
 
 Variables 
 ----------

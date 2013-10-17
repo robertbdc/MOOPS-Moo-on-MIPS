@@ -8,6 +8,8 @@
 .globl printInteger
 .globl killProcess
 .globl printNewline
+.globl pushStack
+.globl popStack
 
 #put string to print in $a0
 printText:
@@ -30,3 +32,8 @@ killProcess:
 	li $v0, 10
 	syscall
 	jr $ra
+	
+pushStack:
+	#soon
+popStack:
+	#soon	

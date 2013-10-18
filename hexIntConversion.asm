@@ -24,58 +24,51 @@ returnString:
 #	$t3 - the integer number (result of atoi)
 #	$t4 - previous $ra
 #	$t5 - copy of a0
+#	$t6 - the ASCII character in need of validation
 atoi:
 	move $t5, $a0  #save address of string in t5
-	move $t4, $ra #save ra for later
 	li $t1, 0
 	li $t3, 0 #just in case
 loop:	
 	beq $t1, 4, success	
 	sll $t3, $t3, 4 #shift the result 4 bits left
 	lb $t6, ($t5)  
-	jal validateDigit 
-	or $t3, $t3, $t2 #combine the current digit and the result of ANDing
-	
-	#advance counters
-	addi $t5, $t5, 1 
-	addi $t1, $t1, 1 
-	j loop
-success:
-	add $v0, $t3, $zero
-	j exitLoop	
-exitLoop:	
-	move $ra, $t4 #restore ra before returning 
-	j return
-# Params:
-#	$t6 - the ASCII character in need of validation
-# exits loop returning -1 if invalid
 validateDigit:
 	blt $t6, 0x30, invalidNumber #0x30 = 0
 	bgt $t6, 0x39, validateUppercase #0x39 = 9
 	# goes to handleDigit if it is between ASCII 0 and 9
 handleDigit:
 	andi $t2, $t6, 0x0F #0x39 & 0x0F = 0x09 
-	j return
+	j addChar
 validateUppercase:		
 	blt $t6, 0x41, invalidNumber #0x41 = A
 	bgt $t6, 0x70, validateLowercase #0x70 = F
 handleUppercase:
 	subi $t2, $t6, 7 #0x41 - 7 = 0x3A
 	andi $t2, $t2, 0x0F #0x3A & 0x0F = 0x0A
-	j return	
+	j addChar	
 validateLowercase:
 	blt $t6, 0x61, invalidNumber #0x61=a
 	bgt $t6, 0x66, invalidNumber #0x66=f
 handleLowercase:
 	addi $t2, $t6, 9
-	andi $t2, $t2, 0x0F
-	j return
-return:
-	jr $ra
-
+	andi $t2, $t2, 0x0F 
+addChar:	
+	or $t3, $t3, $t2 #combine the current digit and the result of ANDing
+	
+	#advance counters
+	addi $t5, $t5, 1 
+	addi $t1, $t1, 1 
+	j loop
+	
+success:
+	add $v0, $t3, $zero
+	j exitLoop	
 invalidNumber:
 	li $v0, -1
 	j exitLoop
+exitLoop:
+	jr $ra	
 	
 #######################################################################
 # itoa - conversion from integer to ASCII string
@@ -132,9 +125,9 @@ finished:
 	#move $ra, $t9
 	sw $t1, returnString
 	la $v0, returnString
-	j return	
+	jr $ra	
 outOfBounds:
 	#move $ra, $t9		
 	la $v0, errorCode
-	j return
+	jr $ra
 

@@ -76,7 +76,7 @@ exitLoop:
 #	$a0 - unsigned integer to convert (must be < 65535 (0xFFFF))
 #
 # Returns:
-#	$v0 - a string representing the integer in hexadecimal 
+#	$v0 - points to a string representing the integer in hexadecimal 
 #		or 'ERR\0' if the number is out of bounds  	
 # Notes:
 #	 returning the string in a register limits it to 4 bytes,

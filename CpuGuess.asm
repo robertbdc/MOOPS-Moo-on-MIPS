@@ -65,10 +65,10 @@ result:
 
 .text
 
-#.globl cpumakeguess
+#.globl cpuguess
 # Params:	$a0 = result from previous guess, format from checkguess (see below)
 # Returns:	$v0 = current guess
-cpumakeguess:
+cpuguess:
 	lw	$t9, phase
 	beq	$t9, $zero, firstguess # no previous guess
 	

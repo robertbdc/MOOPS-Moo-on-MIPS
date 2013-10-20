@@ -25,7 +25,7 @@ testloop:
 	# $a0 = result fm prev
 	# return $v0 = cur guess
 	add	$a0, $zero, $zero
-	jal	cpumakeguess	# BREAK: here's the next guess
+	jal	cpuguess	# BREAK: here's the next guess
 	
 	add	$s0, $zero, $v0	# save guess
 	

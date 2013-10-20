@@ -4,7 +4,8 @@ errorCode:
 	.align 2	
 returnString:
 	.space 4
-		
+	.align 2	
+	
 	.text
 
 .globl atoi

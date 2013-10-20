@@ -1,16 +1,21 @@
 # test routine
 	.data 
 quest1:	.asciiz "Enter guess (four characters, each 0-9 or A-F): "
+	.align 2
 quest2:	.asciiz "Enter the answer to compare to the guess: "
+	.align 2
 you:	.asciiz "You entered: "
+	.align 2
 ans:	.asciiz "The result is: "
+	.align 2
 endln:
 	.asciiz "\n"
+	.align 2
 
 # scratch input buffer (make it big to prevent overflow)
 inpbuffer:
-	.byte 127
-
+	.space 127
+	.align 2
 	.text 
 prompt:
 # Ask for the guess

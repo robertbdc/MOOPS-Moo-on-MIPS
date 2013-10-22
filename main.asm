@@ -6,7 +6,7 @@ playerText:
 computerText:
 	.asciiz "The computer took a turn\n"
 	.align 2
-
+	
 .text
 	.globl main
 	

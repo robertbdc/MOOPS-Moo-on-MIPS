@@ -82,6 +82,20 @@ emptyStack:
 	jr $ra	
 		
 ############################# misc ######################################	
+
+#########################################################################
+# Function which returns a random integer
+# Params:
+#	$a1 - upper bound of range of returned integer values
+#
+# Returns:
+#	$a0 - The integer chosen
+#########################################################################
+randomInteger:
+	li $v0, 42
+	syscall
+	jr $ra
+
 killProcess:
 	li $v0, 10
 	syscall

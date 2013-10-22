@@ -7,8 +7,11 @@ computerSecretNumber:
 		.space 32
 		.align 2
 		
-promptText:
-		.asciiz "Please input your secret number in hex\n"
+humanPromptText:
+		.asciiz "Please input your secret number in hex: "
+		.align 2
+humanGUIText:
+		.asciiz "Please try and guess the secret number: "
 		.align 2
 		
 seperatorText:
@@ -19,39 +22,47 @@ errorText:
 		.asciiz "An error occurred\n"
 		.align 2
 filledHexArray:
-		.asciiz "123456789abcdef"
+		.asciiz "0123456789abcdef"
 		.align 2
 chosenArray:
 		.space 32
 		.align 2
-	
+		
+computerPromptText:
+		.asciiz "Computers guess was: "
+		.align 2
+playerInputBuffer:
+		.space 32
+		.align 2		
 
 .text
 
 .globl main
 
-	#.include "engine.asm"
+	.include "engine.asm"
 	.include "helpers.asm"
 	.include "hexIntConversion.asm"
+	.include "checkguess.asm"
 
 main:
-	la $a0, promptText
+	la $a0, humanPromptText
 	jal printText
+	#j generateComputerSecretNumber
 	
 inputSecretNumber:
 	li $a1, 5
+	la $a0, playerSecretNumber
 	jal readString
-	jal atoi			#get the integer value from the hex string
-	beq $v0, -1, errorOut		#if in put was invalid, errorOut
-	sw $v0, playerSecretNumber	#store it off
+#	jal atoi			#get the integer value from the hex string
+#	beq $v0, -1, errorOut		#if in put was invalid, errorOut
+#	jal itoa
 	
-generateComputerSecretNumber: 	#I might redo this label here
-	la $s0, chosenArray	#the start of our array of already chosen vars
+generateComputerSecretNumber:
+	la $s0, computerSecretNumber	#the start of our array of already chosen vars
 	la $s1, filledHexArray
-	la $s2, computerSecretNumber
 	li $s3, 0		#$s3 will serve as our counter for how many numbers we have generated
 genLoop:
-	li $a1, 16
+	li $a1, 17
 	jal randomInteger
 	move $t0, $a0		#put the index into $t0
 	add $t0, $s1, $t0 	#get the exact position of the index in memory
@@ -70,10 +81,33 @@ checkLoop:
 	addi $s3, $s3, 1
 	bne $s3, 4, genLoop	#if we don't have 4 numbers	
 	jal printNewline
-	la $a0, chosenArray
+	la $a0, computerPromptText #this is all for debugging purposes
 	jal printText
+	move $a0, $s0
+	jal printText
+setupBasics:
+	la $t0, humanTurnCallback	#store off the addresses
+	sw $t0, humanAddress
+	la $t0, computerTurnCallback
+	sw $t0, computerAddress
+	sw $zero, maxTurns	#infinite max turns
 	
+	j engineSetup		#boot up the engine
+humanTurnCallback:
+	la $a0, humanGUIText
+	jal printText
+	la $a0, playerInputBuffer
+	li $a1, 5
+	jal readString
+	la $a1, computerSecretNumber
+	jal checkguess
+	jal printNewline
+	move $a0, $v0
+	jal printInteger
+
+computerTurnCallback:
 	
+
 	
 errorOut:
 	#this is just a placeholder for now, will change in future

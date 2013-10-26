@@ -51,11 +51,11 @@ main:
 	
 inputSecretNumber:
 	li $a1, 5
-	la $a0, playerSecretNumber
+	la $a0, playerInputBuffer
 	jal readString
-#	jal atoi			#get the integer value from the hex string
-#	beq $v0, -1, errorOut		#if in put was invalid, errorOut
-#	jal itoa
+	jal atoi			#get the integer value from the hex string
+	beq $v0, -1, errorOut		#if in put was invalid, errorOut
+	sw $v0, playerSecretNumber
 	
 generateComputerSecretNumber:
 	la $s0, computerSecretNumber	#the start of our array of already chosen vars
@@ -96,14 +96,16 @@ setupBasics:
 humanTurnCallback:
 	la $a0, humanGUIText
 	jal printText
-	la $a0, playerInputBuffer
-	li $a1, 5
+	la $a0, playerInputBuffer	#the input buffer for the
+	li $a1, 5			#max number of characters
 	jal readString
+	jal atoi
+	move $a0, $v0
 	la $a1, computerSecretNumber
 	jal checkguess
 	jal printNewline
 	move $a0, $v0
-	jal printInteger
+	
 
 computerTurnCallback:
 	

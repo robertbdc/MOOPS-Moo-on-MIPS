@@ -34,6 +34,12 @@ computerPromptText:
 playerInputBuffer:
 		.space 32
 		.align 2		
+numberOfBullsString:
+		.asciiz "Number of Bulls: "
+		.align 2
+numberOfCowsString:
+		.asciiz "Number of Cows: "
+		.align 2
 
 .text
 
@@ -47,7 +53,7 @@ playerInputBuffer:
 main:
 	la $a0, humanPromptText
 	jal printText
-	#j generateComputerSecretNumber
+	j generateComputerSecretNumber
 	
 inputSecretNumber:
 	li $a1, 5
@@ -84,7 +90,8 @@ checkLoop:
 	la $a0, computerPromptText #this is all for debugging purposes
 	jal printText
 	move $a0, $s0
-	jal printText
+	jal atoi
+	sw $v0, computerSecretNumber
 setupBasics:
 	la $t0, humanTurnCallback	#store off the addresses
 	sw $t0, humanAddress
@@ -101,11 +108,12 @@ humanTurnCallback:
 	jal readString
 	jal atoi
 	move $a0, $v0
-	la $a1, computerSecretNumber
+	lw $a1, computerSecretNumber
 	jal checkguess
+	move $s0, $v0
 	jal printNewline
-	move $a0, $v0
-	
+	move $a0, $s0
+	jal compareGuess
 
 computerTurnCallback:
 	
@@ -117,4 +125,22 @@ errorOut:
 	la $a0, errorText
 	jal printText
 	j killProcess
+	
+compareGuess:
+	move $t1, $a0 
+	move $ra, $t7	#$t7 is the return address
+	andi $t0, $t1, 0xF000	#check for validity
+	beq $t0, 8 errorOut
+	andi $t0, $t1, 0x00F0
+	srl $t0, $t0, 4
+	la $a0, numberOfBullsString
+	jal printText
+	move $a0, $t0
+	jal printInteger
+	andi $t0, $t1, 0x000F
+	la $a0, numberOfCowsString
+	jal printText
+	move $a0, $t0
+	jal printInteger
+	jr $t7	#I stored off the return address in $t7
 	

@@ -40,6 +40,16 @@ numberOfBullsString:
 numberOfCowsString:
 		.asciiz "Number of Cows: "
 		.align 2
+prevGuessHeader:
+		.asciiz "Guess   Cows   Bulls\n--------------------\n"
+			#-----===----===----- 
+		.align 2
+prevGuessString:
+		.space 22
+		.align 2
+space:
+		.ascii " "
+		.align 2							
 #store preious guesses as 4 bytes of ASCII		
 playerPreviousGuess:
 #how much space do we need? how many possible guesses are there?
@@ -116,6 +126,7 @@ setupBasics:
 	
 	j engineSetup		#boot up the engine
 humanTurnCallback:
+	jal printPreviousGuesses
 	la $a0, humanGUIText
 	jal printText
 	la $a0, playerInputBuffer	#the input buffer for the
@@ -132,10 +143,11 @@ humanTurnCallback:
 	jal printNewline
 	move $a0, $s0
 	jal compareGuess
-
-computerTurnCallback:
+	j computerTurn #jump back to the engine
 	
-
+computerTurnCallback:
+	#TODO: call function for computer guess
+	j doEndTurn
 	
 errorOut:
 	#this is just a placeholder for now, will change in future
@@ -167,4 +179,75 @@ compareGuess:
 	jal printNewline
 	pop($a0)
 	jr $t7	#I stored off the return address in $t7
+
+printPreviousGuesses:
+	push($ra)
+	lw $t0, turnNumber #t0 containts the current turn number(in refrence to the game)
+	beq $t0, 1, exitPrevGuess #don't print previous guesses on turn 1 
+	la $a0, prevGuessHeader
+	jal printText
+	li $t1, 1 #t1 is counter for the current turn number being processed
+prevGuessLoop:
+	beq $t0, $t1, exitPrevGuess
 	
+	sw $zero, prevGuessString
+	la $t3, prevGuessString  #t3 will be the address of cursor
+	loadArrayWord(playerPreviousGuess, $t1, $t2) #t2 holds word fron array
+	sw $t2, ($t3)
+	lb $t4, space
+	sb $t4, 4($t3)
+	sb $t4, 5($t3)
+	sb $t4, 6($t3)
+	sb $t4, 7($t3)
+	sb $t4, 8($t3)
+	loadArrayHalfWord(playerPreviousResults, $t1, $t2) 
+	#last byte of t2 has number of cows
+	andi $a0, $t2, 0x000F
+	
+	push ($t0)
+	push ($t1)
+	jal itoa
+	pop ($t1)
+	pop ($t0)
+	la $t3, prevGuessString
+	
+	lw $t4, ($v0)
+	andi $t4, $t4, 0xFF000000 
+	srl $t4, $t4, 24
+	sb $t4, 9($t3)
+	lb $t4, space
+	sb $t4, 10($t3)
+	sb $t4, 11($t3)
+	sb $t4, 12($t3)
+	sb $t4, 13($t3)
+	sb $t4, 14($t3)
+	sb $t4, 15($t3)
+	loadArrayHalfWord(playerPreviousResults, $t1, $t2) 
+	#second to last byte of t2 has number of bulls
+	andi $a0, $t2, 0x00F0
+	
+	push ($t0)
+	push ($t1)
+	jal itoa
+	pop ($t1)
+	pop ($t0)
+	la $t3, prevGuessString
+	
+	lw $t4, ($v0)
+	andi $t4, $t4, 0x00FF0000 
+	srl $t4, $t4, 16
+	sb $t4, 16($t3)
+	lb $t4, newline
+	sb $t4, 17($t3)
+	li $t5, 1
+	lb $t4, newline($t5)
+	sb $t4, 18($t3)
+	        
+	la $a0, prevGuessString	
+	jal printText
+	
+	addi $t1, $t1, 1
+	j prevGuessLoop	
+exitPrevGuess:	
+	pop($ra)
+	jr $ra		

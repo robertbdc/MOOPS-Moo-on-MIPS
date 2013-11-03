@@ -93,7 +93,7 @@ killProcess:
 # Function which loads a word into the specified register from a word aligned array
 #note: this will use t9	
 .macro loadArrayWord(%arrayLabel, %index, %resultRegister)
-	lw $t9, %index
+	move $t9, %index
 	sll $t9, $t9, 2
 	lw %resultRegister, %arrayLabel($t9)
 .end_macro
@@ -107,7 +107,7 @@ killProcess:
 # Function which loads a halfword into the specified register from a half word aligned array
 #note: this will use t9	
 .macro loadArrayHalfWord(%arrayLabel, %index, %resultRegister)
-	lw $t9, %index
+	move $t9, %index
 	sll $t9, $t9, 1
 	lh %resultRegister, %arrayLabel($t9)
 .end_macro 

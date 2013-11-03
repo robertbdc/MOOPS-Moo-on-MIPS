@@ -34,6 +34,12 @@ computerPromptText:
 playerInputBuffer:
 		.space 32
 		.align 2		
+numberOfBullsString:
+		.asciiz "Number of Bulls: "
+		.align 2
+numberOfCowsString:
+		.asciiz "Number of Cows: "
+		.align 2
 
 .text
 
@@ -47,15 +53,15 @@ playerInputBuffer:
 main:
 	la $a0, humanPromptText
 	jal printText
-	#j generateComputerSecretNumber
+	j generateComputerSecretNumber
 	
 inputSecretNumber:
 	li $a1, 5
-	la $a0, playerSecretNumber
+	la $a0, playerInputBuffer
 	jal readString
-#	jal atoi			#get the integer value from the hex string
-#	beq $v0, -1, errorOut		#if in put was invalid, errorOut
-#	jal itoa
+	jal atoi			#get the integer value from the hex string
+	beq $v0, -1, errorOut		#if in put was invalid, errorOut
+	sw $v0, playerSecretNumber
 	
 generateComputerSecretNumber:
 	la $s0, computerSecretNumber	#the start of our array of already chosen vars
@@ -84,7 +90,8 @@ checkLoop:
 	la $a0, computerPromptText #this is all for debugging purposes
 	jal printText
 	move $a0, $s0
-	jal printText
+	jal atoi
+	sw $v0, computerSecretNumber
 setupBasics:
 	la $t0, humanTurnCallback	#store off the addresses
 	sw $t0, humanAddress
@@ -96,14 +103,17 @@ setupBasics:
 humanTurnCallback:
 	la $a0, humanGUIText
 	jal printText
-	la $a0, playerInputBuffer
-	li $a1, 5
+	la $a0, playerInputBuffer	#the input buffer for the
+	li $a1, 5			#max number of characters
 	jal readString
-	la $a1, computerSecretNumber
-	jal checkguess
-	jal printNewline
+	jal atoi
 	move $a0, $v0
-	jal printInteger
+	lw $a1, computerSecretNumber
+	jal checkguess
+	move $s0, $v0
+	jal printNewline
+	move $a0, $s0
+	jal compareGuess
 
 computerTurnCallback:
 	
@@ -115,4 +125,22 @@ errorOut:
 	la $a0, errorText
 	jal printText
 	j killProcess
+	
+compareGuess:
+	move $t1, $a0 
+	move $ra, $t7	#$t7 is the return address
+	andi $t0, $t1, 0xF000	#check for validity
+	beq $t0, 8 errorOut
+	andi $t0, $t1, 0x00F0
+	srl $t0, $t0, 4
+	la $a0, numberOfBullsString
+	jal printText
+	move $a0, $t0
+	jal printInteger
+	andi $t0, $t1, 0x000F
+	la $a0, numberOfCowsString
+	jal printText
+	move $a0, $t0
+	jal printInteger
+	jr $t7	#I stored off the return address in $t7
 	

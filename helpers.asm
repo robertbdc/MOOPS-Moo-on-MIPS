@@ -93,15 +93,29 @@ killProcess:
 # Function which loads a word into the specified register from a word aligned array
 #note: this will use t9	
 .macro loadArrayWord(%arrayLabel, %index, %resultRegister)
-	li $t9, %index
+	lw $t9, %index
 	sll $t9, $t9, 2
 	lw %resultRegister, %arrayLabel($t9)
-.end_macro 	
+.end_macro
+#function which stores a word from register %storedRegister to the word alligned array %arrayLabel at index %index
+.macro storeArrayWord(%arrayLabel, %index, %storedRegister)
+	lw $t9, %index
+	sll $t9, $t9, 2
+	sw %storedRegister, %arrayLabel($t9)
+.end_macro  	
 
 # Function which loads a halfword into the specified register from a half word aligned array
 #note: this will use t9	
 .macro loadArrayHalfWord(%arrayLabel, %index, %resultRegister)
-	li $t9, %index
+	lw $t9, %index
 	sll $t9, $t9, 1
-	lw %resultRegister, %arrayLabel($t9)
+	lh %resultRegister, %arrayLabel($t9)
+.end_macro 
+
+#Function which stores a halfword in a halfword alligned array
+#storedRegister must be a register, whose contents will be stored in the array
+.macro storeArrayHalfWord(%arrayLabel, %index, %storedRegister)
+	lw $t9, %index
+	sll $t9, $t9, 1
+	sh %storedRegister, %arrayLabel($t9)
 .end_macro 					

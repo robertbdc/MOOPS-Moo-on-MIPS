@@ -9,8 +9,8 @@ newline:.asciiz "\n"
 .globl printInteger
 .globl killProcess
 .globl printNewline
-.globl pushStack
-.globl popStack
+#.globl pushStack
+#.globl popStack
 .globl readInt
 .globl readString
 
@@ -50,47 +50,35 @@ readString:
 	jr $ra
 
 ############################## stack ##################################	
+#TODO: implement moving the frame pointer ($fp)
 
-########################################################################
 # Function which pushes address to stack.
-# NOTE: stack should only be used to push addresses, and 0 should never
-#       be pushed to the stack (because of implementation of pop)
 # Params:
-#	$a0 - address to be pushed to stack
-#######################################################################		
-pushStack:
+#	%a - address to be pushed to stack
+		
+.macro push(%a)
 	addi $sp, $sp, -4
-	sw $a0, ($sp)
-	jr $ra
-	#TODO: implement moving the frame pointer ($fp)
+	sw %a, ($sp) #push onto the stack 
+.end_macro
 
-########################################################################
 # Function which pops stack.
 # Params:
-#
-# Returns:
-#	$v0 - the element just popped off the stack (32 bit address)
-#		returns -1 if stack is empty
-########################################################################	
-popStack:
-	beqz $sp, emptyStack #sp will point to address full of zeros if it is empty
-	lw $v0, ($sp)
+#    %popped - the register which will hold the popped address
+	
+.macro pop(%popped)
+	lw %popped, ($sp) #pop the stack
 	addi $sp, $sp, 4
-	jr $ra
-emptyStack:
-	addi $v0, $zero, -1
-	jr $ra	
+.end_macro
 		
 ############################# misc ######################################	
 
-#########################################################################
 # Function which returns a random integer
 # Params:
 #	$a1 - upper bound of range of returned integer values
 #
 # Returns:
 #	$a0 - The integer chosen
-#########################################################################
+
 randomInteger:
 	li $v0, 42
 	syscall
@@ -99,4 +87,21 @@ randomInteger:
 killProcess:
 	li $v0, 10
 	syscall
-	jr $ra		
+	jr $ra
+######################### array stuff #############################################
+	
+# Function which loads a word into the specified register from a word aligned array
+#note: this will use t9	
+.macro loadArrayWord(%arrayLabel, %index, %resultRegister)
+	li $t9, %index
+	sll $t9, $t9, 2
+	lw %resultRegister, %arrayLabel($t9)
+.end_macro 	
+
+# Function which loads a halfword into the specified register from a half word aligned array
+#note: this will use t9	
+.macro loadArrayHalfWord(%arrayLabel, %index, %resultRegister)
+	li $t9, %index
+	sll $t9, $t9, 1
+	lw %resultRegister, %arrayLabel($t9)
+.end_macro 					

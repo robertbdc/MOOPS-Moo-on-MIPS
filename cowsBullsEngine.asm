@@ -139,6 +139,7 @@ humanTurnCallback:
 	jal readString
 	lw $s6, ($a0)   #s6 has the string read in
 	jal atoi
+	beq $v0, -1, errorOut
 	move $a0, $v0
 	lw $a1, computerSecretNumber
 	jal checkguess

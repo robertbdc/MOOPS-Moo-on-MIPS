@@ -160,7 +160,7 @@ compareGuess:
 	move $t1, $a0 
 	move $t7, $ra	#$t7 is the return address
 	andi $t0, $t1, 0xF000	#check for validity
-	beq $t0, 8 errorOut
+	beq $t0, 0x8000, errorOut
 	andi $t0, $t1, 0x00F0
 	srl $t0, $t0, 4
 	la $a0, numberOfBullsString

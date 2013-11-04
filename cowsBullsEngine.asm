@@ -77,7 +77,7 @@ main:
 	jal printText
 	#j generateComputerSecretNumber
 	
-inputSecretNumber:
+  inputSecretNumber:
 	li $a1, 5
 	la $a0, playerInputBuffer
 	jal readString
@@ -85,19 +85,19 @@ inputSecretNumber:
 	beq $v0, -1, errorOut		#if in put was invalid, errorOut
 	sw $v0, playerSecretNumber
 	
-generateComputerSecretNumber:
+  generateComputerSecretNumber:
 	la $s0, computerSecretNumber	#the start of our array of already chosen vars
 	la $s1, filledHexArray
 	li $s3, 0		#$s3 will serve as our counter for how many numbers we have generated
-genLoop:
+  genLoop:
 	li $a1, 17
 	jal randomInteger
 	move $t0, $a0		#put the index into $t0
 	add $t0, $s1, $t0 	#get the exact position of the index in memory
 	lb $t1, ($t0)		#get the value at that index
-checkIfValueExists:
+  checkIfValueExists:
 	li $t2, 0		#set the currentIndex to zero
-checkLoop:
+  checkLoop:
 	add $t3, $s0, $t2	#get the exact memory position
 	lb $t4, ($t3)
 	beq $t4, $t1, genLoop	#if we found the value, regenerate
@@ -117,7 +117,7 @@ checkLoop:
 	move $a0, $s0
 	jal atoi
 	sw $v0, computerSecretNumber
-setupBasics:
+  setupBasics:
 	la $t0, humanTurnCallback	#store off the addresses
 	sw $t0, humanAddress
 	la $t0, computerTurnCallback
@@ -125,26 +125,37 @@ setupBasics:
 	sw $zero, maxTurns	#infinite max turns
 	
 	j engineSetup		#boot up the engine
+	
+############ human turn ####################	
 humanTurnCallback:
+	la $a0, seperatorText
+	jal printText
 	jal printPreviousGuesses
+   getInput:
 	la $a0, humanGUIText
 	jal printText
 	la $a0, playerInputBuffer	#the input buffer for the
 	li $a1, 5			#max number of characters
 	jal readString
-	lw $a1, ($a0)
-	storeArrayWord(playerPreviousGuess, turnNumber, $a1) #save the guess in the array of guesses
+	lw $s6, ($a0)   #s6 has the string read in
 	jal atoi
 	move $a0, $v0
 	lw $a1, computerSecretNumber
 	jal checkguess
-	storeArrayHalfWord(playerPreviousResults, turnNumber, $v0)	#save the result in the array of results
+	move $s5, $v0  #s5 has the result from checkguess in it
 	move $s0, $v0
 	jal printNewline
 	move $a0, $s0
-	jal compareGuess
+   #checkGuessValidity:
+	move $t1, $a0 
+	andi $t0, $t1, 0xF000	#check for validity
+	beq $t0, 0x8000, errorOut
+	storeArrayHalfWord(playerPreviousResults, turnNumber, $s5)	#save the result in the array of results
+	storeArrayWord(playerPreviousGuess, turnNumber, $s6) #save the guess in the array of guesses
+		
 	j computerTurn #jump back to the engine
-	
+
+############ computer turn ####################	
 computerTurnCallback:
 	#TODO: call function for computer guess
 	j doEndTurn
@@ -154,31 +165,7 @@ errorOut:
 	jal printNewline
 	la $a0, errorText
 	jal printText
-	j killProcess
-	
-compareGuess:
-	move $t1, $a0 
-	move $t7, $ra	#$t7 is the return address
-	andi $t0, $t1, 0xF000	#check for validity
-	beq $t0, 0x8000, errorOut
-	andi $t0, $t1, 0x00F0
-	srl $t0, $t0, 4
-	la $a0, numberOfBullsString
-	jal printText
-	move $a0, $t0
-	jal printInteger
-	push($a0)
-	jal printNewline
-	pop($a0)
-	andi $t0, $t1, 0x000F
-	la $a0, numberOfCowsString
-	jal printText
-	move $a0, $t0
-	jal printInteger
-	push($a0)
-	jal printNewline
-	pop($a0)
-	jr $t7	#I stored off the return address in $t7
+	j getInput	
 
 printPreviousGuesses:
 	push($ra)

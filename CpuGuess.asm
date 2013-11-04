@@ -1,6 +1,3 @@
-.data	
-.text
-
 #.globl cpuguess
 # Params:	$a0 = result from previous guess, format from checkguess (see below)
 # Returns:	$v0 = current guess
@@ -98,8 +95,8 @@ phase1play:
 	# round # is pointer to current guess
 	la	$t9, map
 	lw	$t2, round
-	sll	$t2, $t2, 2	# *4 for word
-	add	$t9, $t9, $t2	# point to current guess
+	sll	$t3, $t2, 2	# *4 for word
+	add	$t9, $t9, $t3	# point to current guess
 	lw	$t0, 0($t9)
 
 	# todo: check whether this guess contains only goats
@@ -108,7 +105,7 @@ phase1play:
 	add	$v0, $zero, $t0	# load current guess into return value
 
 	# advance round and possibly phase
-	addi	$t2, $zero, 1
+	addi	$t2, $t2, 1
 	beq	$t2, 16, phase1done # we've been through all 16 rounds (0-15)
 	sw	$t2, round
 	j	guessmade

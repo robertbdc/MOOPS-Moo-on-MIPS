@@ -47,6 +47,8 @@ testloop:
 	syscall
 
 	addi	$t7, $t7, 1 # show next
+	bgt	$t7, 'Z', done
+	
 	bne	$s0, -1, testloop # did it fail?
 
 done:

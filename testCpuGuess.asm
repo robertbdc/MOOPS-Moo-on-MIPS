@@ -14,10 +14,10 @@ inpbuffer:
 
 	.text 
 testprogram:
-	addi	$t7, $zero, 65	# count up from guess A
+	addi	$s1, $zero, 65	# count up from guess A
 
 testloop:	
-	sb	$t7, guessind
+	sb	$s1, guessind
 	addi $v0, $zero, 4	# print string
 	la $a0, cur	# string to print
 	syscall
@@ -25,7 +25,7 @@ testloop:
 	# $a0 = result fm prev
 	# return $v0 = cur guess
 	add	$a0, $zero, $zero
-	jal	cpuguess	# BREAK: here's the next guess
+	jal	cpuguess	# here's the next guess
 	
 	add	$s0, $zero, $v0	# save guess
 	
@@ -46,8 +46,8 @@ testloop:
 	la $a0, endln	# string to print
 	syscall
 
-	addi	$t7, $t7, 1 # show next
-	bgt	$t7, 'Z', done
+	addi	$s1, $s1, 1 # show next
+	bgt	$s1, 'Z', done
 	
 	bne	$s0, -1, testloop # did it fail?
 

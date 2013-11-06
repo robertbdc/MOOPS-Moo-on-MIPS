@@ -12,19 +12,19 @@
 
 # Some temps used here (for reference when debugging):
 #		$t0 = current guess
-#		$t1 = 
+#		$t1 = current phase
 #		$t2 = current round (within phase)
 #		$t3 = 
 #		$t4 = 
 #		$t5 = 
-#		$t7 = 
-#		$t8 = 
+#		$t7 = previous guess
+#		$t8 = cattle count (bulls + cows)
 #		$t9 = scratch
 
 .data
 
 possibles:
-	.word 0:20 # 20 words initialized to 0
+	.word 0:16 # 16 words initialized to 0 (possible)
 
 .align 2
 
@@ -66,18 +66,23 @@ result:
 # Params:	$a0 = result from previous guess, format from checkguess (see below)
 # Returns:	$v0 = current guess
 cpuguess:
-	lw	$t9, phase
-	beq	$t9, $zero, firstguess # no previous guess
+	lw	$t1, phase
+	beq	$t1, $zero, firstguess # no previous guess
 	
-	# Store result of previous guess
-	sw	$a0, result
+	# Store result of previous guess and get cattle count
+	sw	$a0, result		# Result of last guess
+	lw	$t7, curguess		# Last guess made
+	andi	$t9, $a0, 0x00F0
+	srl	$t9, $t9, 4		# bulls
+	andi	$t8, $a0, 0x000F	# cows
+	add	$t8, $t8, $t9		# total cattle count in $t8
 
 	# go to current phase
-	beq	$t9, 1, phase1check
-	beq	$t9, 2, phase2check
-	beq	$t9, 3, phase3check
-	beq	$t9, 4, phase4check # 4a
-	beq	$t9, 5, phase5check # 4b
+	beq	$t1, 1, phase1check
+	beq	$t1, 2, phase2check
+	beq	$t1, 3, phase3check
+	beq	$t1, 4, phase4check # 4a
+	beq	$t1, 5, phase5check # 4b
 	# If we fall through, there's an error.
 	j error
 
@@ -88,7 +93,24 @@ firstguess:
 	j	phase1play
 
 phase1check:
-	# todo: Implement Phase 1 check
+	# Number of cattle in the last guess is in $t8
+	# Add that value to all the digits in last guess ($t7)
+	# Unless it's zero - that means none are possible, all can be discarded
+	add	$t9, $zero, $zero	# counter BREAKPOINT
+ph1chkloop:
+	andi	$t3, $t7, 0x000F	# digit of last guess
+	sll	$t3, $t3, 2		# get a word
+	lw	$t4, possibles($t3)	# current count for this char, init to 0
+	add	$t4, $t4, $t8		# add to count (even if 0)
+	bne	$t8, $zero, ph1store1
+	addi	$t4, $zero, -1		# zap it, there are none!
+ph1store1:
+	sw	$t4, possibles($t3)	# store result
+	beq	$t9, 3, phase1play
+	srl	$t7, $t7, 4		# get next digit
+	addi	$t9, $t9, 1
+	j	ph1chkloop
+	
 	# fall through to play
 
 phase1play:

@@ -34,6 +34,15 @@ computerPromptText:
 playerInputBuffer:
 		.space 32
 		.align 2		
+invCharPrompt:
+	.asciiz "\nERROR: valid digits are 0-9 and A-F only\n"
+	.align 2
+reusedDigitPrompt:
+	.asciiz "\nERROR: all digits in the number must be unique\n"	
+	.align 2
+alreadyGuessedPrompt:
+	.asciiz "\nERROR: number has already been guessed\n"
+	.align 2			
 #numberOfBullsString:
 #		.asciiz "Number of Bulls: "
 #		.align 2
@@ -117,7 +126,7 @@ humanTurnCallback:
 	jal readString
 	lw $s6, ($a0)   #s6 has the string read in
 	jal atoi
-	beq $v0, -1, errorOut #ERROR:number uses invalid characters
+	beq $v0, -1, handleInvChar #ERROR:number uses invalid characters
 	move $a0, $v0
 	lw $a1, computerSecretNumber
 	jal checkguess
@@ -128,11 +137,11 @@ humanTurnCallback:
    #checkGuessValidity:
 	move $t1, $a0 
 	andi $t0, $t1, 0xF000	#check for validity
-	beq $t0, 0x8000, errorOut #ERROR: number uses a digit more than once
+	beq $t0, 0x8000, handleReusedDigit #ERROR: number uses a digit more than once
 	la $a0, playerInputBuffer
 	lw $a1, turnNumber
 	jal alreadyGuessed
-	beq $v0, 1, errorOut #ERROR: number was already guessed
+	beq $v0, 1, handleAlreadyGuessed #ERROR: number was already guessed
 	storeArrayHalfWord(playerPreviousResults, turnNumber, $s5)	#save the result in the array of results
 	storeArrayWord(playerPreviousGuess, turnNumber, $s6) #save the guess in the array of guesses
 		
@@ -143,9 +152,16 @@ computerTurnCallback:
 	#TODO: call function for computer guess
 	j doEndTurn
 	
+############ error handling ######################	
+handleInvChar:
+	la $a0, invCharPrompt
+	j errorOut
+handleReusedDigit:
+	la $a0, reusedDigitPrompt
+	j errorOut
+handleAlreadyGuessed:
+	la $a0, alreadyGuessedPrompt
+	j errorOut
 errorOut:
-	#this is just a placeholder for now, will change in future
-	jal printNewline
-	la $a0, errorText
 	jal printText
 	j getInput	

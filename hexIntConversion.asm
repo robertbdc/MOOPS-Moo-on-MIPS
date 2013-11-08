@@ -43,7 +43,7 @@ handleDigit:
 	j addChar
 validateUppercase:		
 	blt $t6, 0x41, invalidNumber #0x41 = A
-	bgt $t6, 0x70, validateLowercase #0x70 = F
+	bgt $t6, 0x46, validateLowercase #0x70 = F
 handleUppercase:
 	subi $t2, $t6, 7 #0x41 - 7 = 0x3A
 	andi $t2, $t2, 0x0F #0x3A & 0x0F = 0x0A

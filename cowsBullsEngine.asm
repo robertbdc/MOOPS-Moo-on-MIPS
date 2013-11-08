@@ -42,7 +42,10 @@ reusedDigitPrompt:
 	.align 2
 alreadyGuessedPrompt:
 	.asciiz "\nERROR: number has already been guessed\n"
-	.align 2			
+	.align 2		
+playerWinPrompt:
+	.asciiz "\n4 bulls -> YOU WIN!\n"		
+	.align 2
 #numberOfBullsString:
 #		.asciiz "Number of Bulls: "
 #		.align 2
@@ -138,6 +141,9 @@ humanTurnCallback:
 	move $t1, $a0 
 	andi $t0, $t1, 0xF000	#check for validity
 	beq $t0, 0x8000, handleReusedDigit #ERROR: number uses a digit more than once
+   #check for win
+   	andi $t0, $t1, 0x000000F0
+   	beq $t0, 0x00000040, playerWin
 	la $a0, playerInputBuffer
 	lw $a1, turnNumber
 	jal alreadyGuessed
@@ -147,10 +153,14 @@ humanTurnCallback:
 		
 	j computerTurn #jump back to the engine
 
+playerWin:
+	la $a0, playerWinPrompt
+	jal printText
+	jal endGame
 ############ computer turn ####################	
 computerTurnCallback:
 	#TODO: call function for computer guess
-	j doEndTurn
+	j doEndTurn	
 	
 ############ error handling ######################	
 handleInvChar:

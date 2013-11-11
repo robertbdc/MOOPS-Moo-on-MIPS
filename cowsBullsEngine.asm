@@ -32,7 +32,7 @@ computerPromptText:
 		.asciiz "Computers guess was: "
 		.align 2
 playerInputBuffer:
-		.space 32
+		.space 36
 		.align 2		
 invCharPrompt:
 	.asciiz "\nERROR: valid digits are 0-9 and A-F only\n"
@@ -46,12 +46,15 @@ alreadyGuessedPrompt:
 playerWinPrompt:
 	.asciiz "\n4 bulls -> YOU WIN!\n"		
 	.align 2
-#numberOfBullsString:
-#		.asciiz "Number of Bulls: "
-#		.align 2
-#numberOfCowsString:
-#		.asciiz "Number of Cows: "
-#		.align 2
+computerWinPrompt:
+	.asciiz "\nComputer got 4 bulls -> YOU LOSE!\n"		
+	.align 2	
+numberOfBullsString:
+		.asciiz "Number of Bulls: "
+		.align 2
+numberOfCowsString:
+		.asciiz " Number of Cows: "
+		.align 2
 .text
 
 .globl main
@@ -60,6 +63,7 @@ playerWinPrompt:
 	.include "helpers.asm"
 	.include "hexIntConversion.asm"
 	.include "checkguess.asm"
+	.include "CpuGuess.asm"
 	.include "previousGuesses.asm"
 
 main:
@@ -150,19 +154,15 @@ humanTurnCallback:
 	beq $v0, 1, handleAlreadyGuessed #ERROR: number was already guessed
 	storeArrayHalfWord(playerPreviousResults, turnNumber, $s5)	#save the result in the array of results
 	storeArrayWord(playerPreviousGuess, turnNumber, $s6) #save the guess in the array of guesses
-		
+   exitHumanTurn:		
 	j computerTurn #jump back to the engine
 
 playerWin:
 	la $a0, playerWinPrompt
 	jal printText
 	jal endGame
-############ computer turn ####################	
-computerTurnCallback:
-	#TODO: call function for computer guess
-	j doEndTurn	
 	
-############ error handling ######################	
+# error handling 
 handleInvChar:
 	la $a0, invCharPrompt
 	j errorOut
@@ -174,4 +174,66 @@ handleAlreadyGuessed:
 	j errorOut
 errorOut:
 	jal printText
-	j getInput	
+	j getInput		
+	
+############ computer turn ####################	
+computerTurnCallback:
+	#TODO: call function for computer guess
+	lw $t0, turnNumber
+	bgt $t0, 1, getPreviousResult
+  initialSetup:
+  	add	$a0, $zero, $zero
+	j callAI
+  getPreviousResult:
+  	pop($a0)
+  callAI:
+  	jal	cpuguess
+  storeResult:
+  	push($v0)
+  	add	$s0, $zero, $v0	# save guess
+  	
+  	# convert integer in $a0 back to ascii for display
+	# $v0 points to ascii buffer (not null terminated)
+	add $a0, $zero, $s0
+	jal itoa 
+	
+	# move 4 bytes at 0($v0) to buffer and add a /0
+	lw $t0, 0($v0)
+	sw $t0, playerInputBuffer
+	sw $zero, playerInputBuffer + 4
+  checkResult:
+  	move $a0, $s0
+  	lw $a1, playerSecretNumber
+  	jal checkguess
+	move $t1, $v0 
+   #check for win
+   	andi $t0, $t1, 0x000000F0
+   	beq $t0, 0x00000040, computerWin
+   	srl $t0, $t0, 4                       #t0 now has the number of bulls
+   	andi $t1, $t1, 0x0000000F             #t1 now has the number of cows
+	
+  printResult:
+  	la $a0, seperatorText
+  	jal printText 
+  	la $a0, computerPromptText
+  	jal printText
+  	la $a0, playerInputBuffer
+  	jal printText
+  	jal printNewline
+  	la $a0, numberOfBullsString
+  	jal printText
+  	move $a0, $t0
+  	jal printInteger
+  	la $a0, numberOfCowsString
+  	jal printText
+  	move $a0, $t1
+  	jal printInteger
+  	jal printNewline
+  	
+  exitComputerCallback:			
+	j doEndTurn
+	
+computerWin:
+	la $a0, computerWinPrompt
+	jal printText
+	jal endGame		

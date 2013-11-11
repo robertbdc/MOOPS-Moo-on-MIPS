@@ -24,10 +24,6 @@ If the second player guesses the number within a set amount of tries, they win.
 1. function to store guessed numbers and where they were guessed at
   * a boolean array of already guessed numbers may be useful here.
 2. function(s) which takes the guessed numbers and the number of cows and bulls in previous guess to make a guess 
-    
-###Winning the game
-1. check for win function
-  * if number of bulls = 4, win game
 
 ###Extra Stuff
 1. Add ability to play again.  Keep score and see how badly you can beat the AI.

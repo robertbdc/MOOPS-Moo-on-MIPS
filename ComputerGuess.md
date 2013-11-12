@@ -5,10 +5,10 @@ The computer guess function is a relatively simplistic, brute-force algorithm, w
 
 ##Terminology
 
-Bull: A correct character in the right position
-Cow: A character that is in the answer, but is in the wrong position
-Bovine: A Bull or a Cow (Total bovines = Bulls + Cows)
-Goat: A character that is not in the answer
+* Bull: A correct character in the right position
+* Cow: A character that is in the answer, but is in the wrong position
+* Bovine: A Bull or a Cow (Total bovines = Bulls + Cows)
+* Goat: A character that is not in the answer
 
 #Number Array
 
@@ -34,6 +34,7 @@ After set 0 has been processed, we may or may not have some known Goats. Any Goa
 Continue until we are down to two guesses, one with three Bovines, and the other with one Bovine. (Or until we run out of digits - behavior at this point is uncertain, will probably cycle back to top.)
 
 For example:
+
 Answer: 83A6
 
     0123: Bovines = 1 (1 cow, no bulls)

@@ -62,9 +62,9 @@ numberOfCowsString:
 	.include "engine.asm"
 	.include "helpers.asm"
 	.include "hexIntConversion.asm"
+	.include "previousGuesses.asm"
 	.include "checkguess.asm"
 	.include "CpuGuess.asm"
-	.include "previousGuesses.asm"
 
 main:
 	la $a0, humanPromptText

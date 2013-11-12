@@ -29,7 +29,7 @@ chosenArray:
 		.align 2
 		
 computerPromptText:
-		.asciiz "Computers guess was: "
+		.asciiz "Computer's guess was: "
 		.align 2
 playerInputBuffer:
 		.space 36
@@ -83,15 +83,15 @@ main:
 	la $s0, computerSecretNumber	#the start of our array of already chosen vars
 	la $s1, filledHexArray
 	li $s3, 0		#$s3 will serve as our counter for how many numbers we have generated
-  genLoop:
+    genLoop:
 	li $a1, 17
 	jal randomInteger
 	move $t0, $a0		#put the index into $t0
 	add $t0, $s1, $t0 	#get the exact position of the index in memory
 	lb $t1, ($t0)		#get the value at that index
-  checkIfValueExists:
+    checkIfValueExists:
 	li $t2, 0		#set the currentIndex to zero
-  checkLoop:
+    checkLoop:
 	add $t3, $s0, $t2	#get the exact memory position
 	lb $t4, ($t3)
 	beq $t4, $t1, genLoop	#if we found the value, regenerate
@@ -149,30 +149,30 @@ humanTurnCallback:
 	andi $t0, $t1, 0xF000	#check for validity
 	beq $t0, 0x8000, handleReusedDigit #ERROR: number uses a digit more than once
    #check for win
-   	andi $t0, $t1, 0x000000F0
-   	beq $t0, 0x00000040, playerWin
+	andi $t0, $t1, 0x000000F0
+	beq $t0, 0x00000040, playerWin
 	la $a0, playerInputBuffer
 	lw $a1, turnNumber
 	li $a2, 1
 	jal alreadyGuessed
 	beq $v0, 1, handleAlreadyGuessed #ERROR: number was already guessed
    printHumanResult:
-   	jal printNewline
-   	
-  	la $a0, numberOfBullsString
-  	jal printText
-  	
-  	andi $a0, $s5, 0x000000F0
-  	srl $a0, $a0, 4
-  	jal printInteger
-  	
-  	la $a0, numberOfCowsString
-  	jal printText
-  	
-  	andi $a0, $s5, 0x0000000F
-  	jal printInteger
-  	jal printNewline
-  	jal printNewline	
+	jal printNewline
+	
+	la $a0, numberOfBullsString
+	jal printText
+	
+	andi $a0, $s5, 0x000000F0
+	srl $a0, $a0, 4
+	jal printInteger
+	
+	la $a0, numberOfCowsString
+	jal printText
+	
+	andi $a0, $s5, 0x0000000F
+	jal printInteger
+	jal printNewline
+	jal printNewline	
 	storeArrayHalfWord(playerPreviousResults, turnNumber, $s5)	#save the result in the array of results
 	storeArrayWord(playerPreviousGuess, turnNumber, $s6) #save the guess in the array of guesses
    exitHumanTurn:		
@@ -203,17 +203,17 @@ computerTurnCallback:
 	lw $t0, turnNumber
 	bgt $t0, 1, getPreviousResult
   initialSetup:
-  	add	$a0, $zero, $zero
+	add	$a0, $zero, $zero
 	j callAI
   getPreviousResult:
-  	pop($a0)
+	pop($a0)
   callAI:
-  	jal	cpuguess
+	jal	cpuguess
   storeResult:
-  	push($v0)
-  	add	$s0, $zero, $v0	# save guess
-  	
-  	# convert integer in $a0 back to ascii for display
+	push($v0)
+	add	$s0, $zero, $v0	# save guess
+	
+	# convert integer in $a0 back to ascii for display
 	# $v0 points to ascii buffer (not null terminated)
 	add $a0, $zero, $s0
 	jal itoa 
@@ -224,36 +224,36 @@ computerTurnCallback:
 	storeArrayWord(computerPreviousGuess, turnNumber, $t0) #save the guess in the array of guesses
 	sw $zero, playerInputBuffer + 4
   checkResult:
-  	move $a0, $s0
-  	lw $a1, playerSecretNumber
-  	jal checkguess
-  	storeArrayHalfWord(computerPreviousResults, turnNumber, $v0)	#save the result in the array of results
+	move $a0, $s0
+	lw $a1, playerSecretNumber
+	jal checkguess
+	storeArrayHalfWord(computerPreviousResults, turnNumber, $v0)	#save the result in the array of results
 	move $t1, $v0 
    #check for win
-   	andi $t0, $t1, 0x000000F0
-   	beq $t0, 0x00000040, computerWin
-   	srl $t0, $t0, 4                       #t0 now has the number of bulls
-   	andi $t1, $t1, 0x0000000F             #t1 now has the number of cows
+	andi $t0, $t1, 0x000000F0
+	beq $t0, 0x00000040, computerWin
+	srl $t0, $t0, 4                       #t0 now has the number of bulls
+	andi $t1, $t1, 0x0000000F             #t1 now has the number of cows
 	
   printResult:
-  	#la $a0, seperatorText
-  	#jal printText 
-  	la $a0, computerPromptText
-  	jal printText
-  	la $a0, playerInputBuffer
-  	jal printText
-  	jal printNewline
-  	la $a0, numberOfBullsString
-  	jal printText
-  	move $a0, $t0
-  	jal printInteger
-  	la $a0, numberOfCowsString
-  	jal printText
-  	move $a0, $t1
-  	jal printInteger
-  	li $a0, 2
+	#la $a0, seperatorText
+	#jal printText 
+	la $a0, computerPromptText
+	jal printText
+	la $a0, playerInputBuffer
+	jal printText
+	jal printNewline
+	la $a0, numberOfBullsString
+	jal printText
+	move $a0, $t0
+	jal printInteger
+	la $a0, numberOfCowsString
+	jal printText
+	move $a0, $t1
+	jal printInteger
+	li $a0, 2
 	jal printPreviousGuesses
-  	
+	
   exitComputerCallback:			
 	j doEndTurn
 	

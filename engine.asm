@@ -1,5 +1,6 @@
 .data
 turnNumber:
+	.word 0 #initialize it to 0
 	.align 2
 	.space 256 #just nice numbers. I don't really have a sense of actual sizes right now
 	

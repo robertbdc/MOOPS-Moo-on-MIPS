@@ -76,7 +76,7 @@ main:
 	la $a0, playerInputBuffer
 	jal readString
 	jal atoi			#get the integer value from the hex string
-	beq $v0, -1, errorOut		#if in put was invalid, errorOut
+	beq $v0, -1, handleInvChar		#if in put was invalid, errorOut
 	sw $v0, playerSecretNumber
 	
   generateComputerSecretNumber:
@@ -195,6 +195,8 @@ handleAlreadyGuessed:
 	j errorOut
 errorOut:
 	jal printText
+	lw $t6, turnNumber
+	beq $t6, 0, main 
 	j getInput		
 	
 ############ computer turn ####################	

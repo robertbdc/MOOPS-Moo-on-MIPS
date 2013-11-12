@@ -54,7 +54,7 @@ numberOfBullsString:
 		.align 2
 numberOfCowsString:
 		.asciiz " Number of Cows: "
-		.align 2
+		.align 2		
 .text
 
 .globl main
@@ -124,6 +124,9 @@ main:
 humanTurnCallback:
 	la $a0, seperatorText
 	jal printText
+	#la $a0, playerPrevGuessHeader
+	#jal printText
+	li $a0, 1
 	jal printPreviousGuesses
    getInput:
 	la $a0, humanGUIText
@@ -139,7 +142,7 @@ humanTurnCallback:
 	jal checkguess
 	move $s5, $v0  #s5 has the result from checkguess in it
 	move $s0, $v0
-	jal printNewline
+	#jal printNewline
 	move $a0, $s0
    #checkGuessValidity:
 	move $t1, $a0 
@@ -150,8 +153,26 @@ humanTurnCallback:
    	beq $t0, 0x00000040, playerWin
 	la $a0, playerInputBuffer
 	lw $a1, turnNumber
+	li $a2, 1
 	jal alreadyGuessed
 	beq $v0, 1, handleAlreadyGuessed #ERROR: number was already guessed
+   printHumanResult:
+   	jal printNewline
+   	
+  	la $a0, numberOfBullsString
+  	jal printText
+  	
+  	andi $a0, $s5, 0x000000F0
+  	srl $a0, $a0, 4
+  	jal printInteger
+  	
+  	la $a0, numberOfCowsString
+  	jal printText
+  	
+  	andi $a0, $s5, 0x0000000F
+  	jal printInteger
+  	jal printNewline
+  	jal printNewline	
 	storeArrayHalfWord(playerPreviousResults, turnNumber, $s5)	#save the result in the array of results
 	storeArrayWord(playerPreviousGuess, turnNumber, $s6) #save the guess in the array of guesses
    exitHumanTurn:		
@@ -200,11 +221,13 @@ computerTurnCallback:
 	# move 4 bytes at 0($v0) to buffer and add a /0
 	lw $t0, 0($v0)
 	sw $t0, playerInputBuffer
+	storeArrayWord(computerPreviousGuess, turnNumber, $t0) #save the guess in the array of guesses
 	sw $zero, playerInputBuffer + 4
   checkResult:
   	move $a0, $s0
   	lw $a1, playerSecretNumber
   	jal checkguess
+  	storeArrayHalfWord(computerPreviousResults, turnNumber, $v0)	#save the result in the array of results
 	move $t1, $v0 
    #check for win
    	andi $t0, $t1, 0x000000F0
@@ -213,8 +236,8 @@ computerTurnCallback:
    	andi $t1, $t1, 0x0000000F             #t1 now has the number of cows
 	
   printResult:
-  	la $a0, seperatorText
-  	jal printText 
+  	#la $a0, seperatorText
+  	#jal printText 
   	la $a0, computerPromptText
   	jal printText
   	la $a0, playerInputBuffer
@@ -228,7 +251,8 @@ computerTurnCallback:
   	jal printText
   	move $a0, $t1
   	jal printInteger
-  	jal printNewline
+  	li $a0, 2
+	jal printPreviousGuesses
   	
   exitComputerCallback:			
 	j doEndTurn

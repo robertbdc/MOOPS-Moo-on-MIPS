@@ -9,7 +9,13 @@ prevGuessString:
 		.align 2
 space:
 		.ascii " "
-		.align 2							
+		.align 2
+playerPrevGuessHeader:
+	.asciiz "\nPlayer's previous guesses:\n"
+	.align 2
+computerPrevGuessHeader:
+	.asciiz "\nComputer's previous guesses:\n"
+	.align 2							
 #store preious guesses as 4 bytes of ASCII		
 playerPreviousGuess:
 #how much space do we need? how many possible guesses are there?
@@ -23,12 +29,22 @@ playerPreviousResults:
 #most signifigant byte of halfword will hold number of bulls
 		.space 87360 #174720/2
 		.align 1
+computerPreviousGuess:
+		.space 174720
+		.align 2
+computerPreviousResults:
+		.space 87360 
+		.align 1	
+		
 .text
 #.include "helpers.asm"
 
 # Function which checks array for a previous guess
 # params: a0 - the address containing the guess
 #	  a1 - the current turn number in the game
+#         a2 - player number = 1 if player
+#                              2 if computer
+#                           
 # returns; v0 - 1 if the guess has already been guessed
 #		0 if the guess has not been guessed
 
@@ -39,39 +55,76 @@ alreadyGuessed:
 	li $v0, 0 # initially set return value to 0 (not found)
     guessedLoop:
 	bge  $t2, $t1, exitGuessed
+	beq $a2, 2, loadComputerGuess
+      loadPlayerGuess:	
 	loadArrayWord(playerPreviousGuess, $t2, $t3) #t3 holds the guess located at index t2
+	j checkGuess
+      loadComputerGuess:
+        loadArrayWord(computerPreviousGuess, $t2, $t3) #t3 holds the guess located at index t2
+      checkGuess:	
 	beq $t3, $t0, setGuessed
 	addi $t2, $t2, 1
 	j guessedLoop	
-    setGuessed:
+      setGuessed:
     	li $v0, 1
     exitGuessed:	
 	jr $ra
 
+# Function which prints the the orevious guesses
+# param: a0 - the player number = 1 if player
+#				  2 if computer
+#	t1 is counter for the current turn number being processed
+#	t3 will be the address of cursor
+#	t6 saves the player number
+#	t7 stores previous result from checkguess
 printPreviousGuesses:
 	push($ra)
-	lw $t0, turnNumber #t0 containts the current turn number(in refrence to the game)
-	beq $t0, 1, exitPrevGuess #don't print previous guesses on turn 1 
+	move $t6, $a0	#save the player number
+	lw $t0, turnNumber #t0 contains the current turn number(in refrence to the game)
+	beq $t0, 1, exitPrevGuess #don't print previous guesses on turn 1
+	beq $t6, 2, printCompHeader
+   printPlayerHeader:
+        la $a0, playerPrevGuessHeader
+        jal printText
+        j printCommonHeader	
+   printCompHeader: 
+	la $a0, computerPrevGuessHeader
+  	jal printText
+   printCommonHeader:	
 	la $a0, prevGuessHeader
 	jal printText
 	li $t1, 1 #t1 is counter for the current turn number being processed
-prevGuessLoop:
+   prevGuessLoop:
 	beq $t0, $t1, exitPrevGuess
 	
 	sw $zero, prevGuessString
 	la $t3, prevGuessString  #t3 will be the address of cursor
+	
+	beq $t6, 2, loadComputerGuess1
+      loadPlayerGuess1:	
 	loadArrayWord(playerPreviousGuess, $t1, $t2) #t2 holds word fron array
-	sw $t2, ($t3)
+	j insertGuess
+      loadComputerGuess1:
+        loadArrayWord(computerPreviousGuess, $t1, $t2) #t2 holds word fron array
+      insertGuess:
+        sw $t2, ($t3)	
 	lb $t4, space
 	sb $t4, 4($t3)
 	sb $t4, 5($t3)
 	sb $t4, 6($t3)
 	sb $t4, 7($t3)
 	sb $t4, 8($t3)
-	loadArrayHalfWord(playerPreviousResults, $t1, $t2) 
+	beq $t6, 2, loadComputerResult
+      loadPlayerResult:	
+	loadArrayHalfWord(playerPreviousResults, $t1, $t2)
+	move $t7, $t2
+	j extractResult
+      loadComputerResult:
+        loadArrayHalfWord(computerPreviousResults, $t1, $t2)
+        move $t7, $t2
+      extractResult:      
 	#last byte of t2 has number of cows
 	andi $a0, $t2, 0x000F
-	
 	push ($t0)
 	push ($t1)
 	jal itoa
@@ -90,7 +143,8 @@ prevGuessLoop:
 	sb $t4, 13($t3)
 	sb $t4, 14($t3)
 	sb $t4, 15($t3)
-	loadArrayHalfWord(playerPreviousResults, $t1, $t2) 
+	#loadArrayHalfWord(playerPreviousResults, $t1, $t2)
+	move $t2, $t7 
 	#second to last byte of t2 has number of bulls
 	andi $a0, $t2, 0x00F0
 	
@@ -116,7 +170,7 @@ prevGuessLoop:
 	
 	addi $t1, $t1, 1
 	j prevGuessLoop	
-exitPrevGuess:	
+   exitPrevGuess:	
 	pop($ra)
 	jr $ra		
 

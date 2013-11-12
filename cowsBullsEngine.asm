@@ -32,37 +32,29 @@ computerPromptText:
 		.asciiz "Computers guess was: "
 		.align 2
 playerInputBuffer:
-		.space 32
+		.space 36
 		.align 2		
+invCharPrompt:
+	.asciiz "\nERROR: valid digits are 0-9 and A-F only\n"
+	.align 2
+reusedDigitPrompt:
+	.asciiz "\nERROR: all digits in the number must be unique\n"	
+	.align 2
+alreadyGuessedPrompt:
+	.asciiz "\nERROR: number has already been guessed\n"
+	.align 2		
+playerWinPrompt:
+	.asciiz "\n4 bulls -> YOU WIN!\n"		
+	.align 2
+computerWinPrompt:
+	.asciiz "\nComputer got 4 bulls -> YOU LOSE!\n"		
+	.align 2	
 numberOfBullsString:
 		.asciiz "Number of Bulls: "
 		.align 2
 numberOfCowsString:
-		.asciiz "Number of Cows: "
+		.asciiz " Number of Cows: "
 		.align 2
-prevGuessHeader:
-		.asciiz "Guess   Cows   Bulls\n--------------------\n"
-			#-----===----===----- 
-		.align 2
-prevGuessString:
-		.space 22
-		.align 2
-space:
-		.ascii " "
-		.align 2							
-#store preious guesses as 4 bytes of ASCII		
-playerPreviousGuess:
-#how much space do we need? how many possible guesses are there?
-#16 choose 4 = 16*15*14*13 = 43680 guesses * 4bytes/guess = 174720 bytes
-		.space 174720
-		.align 2		
-playerPreviousResults:
-#really only need 3 bits for each guess, because the most cows/bulls you can have is 4
-#lets align this one on the half word to make life easier (who wants a 6 bit array?)
-#least signifigant byte of 1/2 word will hold number of cows
-#most signifigant byte of halfword will hold number of bulls
-		.space 87360 #174720/2
-		.align 1
 .text
 
 .globl main
@@ -71,6 +63,8 @@ playerPreviousResults:
 	.include "helpers.asm"
 	.include "hexIntConversion.asm"
 	.include "checkguess.asm"
+	.include "CpuGuess.asm"
+	.include "previousGuesses.asm"
 
 main:
 	la $a0, humanPromptText
@@ -139,7 +133,7 @@ humanTurnCallback:
 	jal readString
 	lw $s6, ($a0)   #s6 has the string read in
 	jal atoi
-	beq $v0, -1, errorOut
+	beq $v0, -1, handleInvChar #ERROR:number uses invalid characters
 	move $a0, $v0
 	lw $a1, computerSecretNumber
 	jal checkguess
@@ -150,92 +144,96 @@ humanTurnCallback:
    #checkGuessValidity:
 	move $t1, $a0 
 	andi $t0, $t1, 0xF000	#check for validity
-	beq $t0, 0x8000, errorOut
+	beq $t0, 0x8000, handleReusedDigit #ERROR: number uses a digit more than once
+   #check for win
+   	andi $t0, $t1, 0x000000F0
+   	beq $t0, 0x00000040, playerWin
+	la $a0, playerInputBuffer
+	lw $a1, turnNumber
+	jal alreadyGuessed
+	beq $v0, 1, handleAlreadyGuessed #ERROR: number was already guessed
 	storeArrayHalfWord(playerPreviousResults, turnNumber, $s5)	#save the result in the array of results
 	storeArrayWord(playerPreviousGuess, turnNumber, $s6) #save the guess in the array of guesses
-		
+   exitHumanTurn:		
 	j computerTurn #jump back to the engine
 
+playerWin:
+	la $a0, playerWinPrompt
+	jal printText
+	jal endGame
+	
+# error handling 
+handleInvChar:
+	la $a0, invCharPrompt
+	j errorOut
+handleReusedDigit:
+	la $a0, reusedDigitPrompt
+	j errorOut
+handleAlreadyGuessed:
+	la $a0, alreadyGuessedPrompt
+	j errorOut
+errorOut:
+	jal printText
+	j getInput		
+	
 ############ computer turn ####################	
 computerTurnCallback:
 	#TODO: call function for computer guess
+	lw $t0, turnNumber
+	bgt $t0, 1, getPreviousResult
+  initialSetup:
+  	add	$a0, $zero, $zero
+	j callAI
+  getPreviousResult:
+  	pop($a0)
+  callAI:
+  	jal	cpuguess
+  storeResult:
+  	push($v0)
+  	add	$s0, $zero, $v0	# save guess
+  	
+  	# convert integer in $a0 back to ascii for display
+	# $v0 points to ascii buffer (not null terminated)
+	add $a0, $zero, $s0
+	jal itoa 
+	
+	# move 4 bytes at 0($v0) to buffer and add a /0
+	lw $t0, 0($v0)
+	sw $t0, playerInputBuffer
+	sw $zero, playerInputBuffer + 4
+  checkResult:
+  	move $a0, $s0
+  	lw $a1, playerSecretNumber
+  	jal checkguess
+	move $t1, $v0 
+   #check for win
+   	andi $t0, $t1, 0x000000F0
+   	beq $t0, 0x00000040, computerWin
+   	srl $t0, $t0, 4                       #t0 now has the number of bulls
+   	andi $t1, $t1, 0x0000000F             #t1 now has the number of cows
+	
+  printResult:
+  	la $a0, seperatorText
+  	jal printText 
+  	la $a0, computerPromptText
+  	jal printText
+  	la $a0, playerInputBuffer
+  	jal printText
+  	jal printNewline
+  	la $a0, numberOfBullsString
+  	jal printText
+  	move $a0, $t0
+  	jal printInteger
+  	la $a0, numberOfCowsString
+  	jal printText
+  	move $a0, $t1
+  	jal printInteger
+  	jal printNewline
+  	
+  exitComputerCallback:			
 	j doEndTurn
 	
-errorOut:
-	#this is just a placeholder for now, will change in future
-	jal printNewline
-	la $a0, errorText
+computerWin:
+	la $a0, computerWinPrompt
 	jal printText
-	j getInput	
-
-printPreviousGuesses:
-	push($ra)
-	lw $t0, turnNumber #t0 containts the current turn number(in refrence to the game)
-	beq $t0, 1, exitPrevGuess #don't print previous guesses on turn 1 
-	la $a0, prevGuessHeader
-	jal printText
-	li $t1, 1 #t1 is counter for the current turn number being processed
-prevGuessLoop:
-	beq $t0, $t1, exitPrevGuess
-	
-	sw $zero, prevGuessString
-	la $t3, prevGuessString  #t3 will be the address of cursor
-	loadArrayWord(playerPreviousGuess, $t1, $t2) #t2 holds word fron array
-	sw $t2, ($t3)
-	lb $t4, space
-	sb $t4, 4($t3)
-	sb $t4, 5($t3)
-	sb $t4, 6($t3)
-	sb $t4, 7($t3)
-	sb $t4, 8($t3)
-	loadArrayHalfWord(playerPreviousResults, $t1, $t2) 
-	#last byte of t2 has number of cows
-	andi $a0, $t2, 0x000F
-	
-	push ($t0)
-	push ($t1)
-	jal itoa
-	pop ($t1)
-	pop ($t0)
-	la $t3, prevGuessString
-	
-	lw $t4, ($v0)
-	andi $t4, $t4, 0xFF000000 
-	srl $t4, $t4, 24
-	sb $t4, 9($t3)
-	lb $t4, space
-	sb $t4, 10($t3)
-	sb $t4, 11($t3)
-	sb $t4, 12($t3)
-	sb $t4, 13($t3)
-	sb $t4, 14($t3)
-	sb $t4, 15($t3)
-	loadArrayHalfWord(playerPreviousResults, $t1, $t2) 
-	#second to last byte of t2 has number of bulls
-	andi $a0, $t2, 0x00F0
-	
-	push ($t0)
-	push ($t1)
-	jal itoa
-	pop ($t1)
-	pop ($t0)
-	la $t3, prevGuessString
-	
-	lw $t4, ($v0)
-	andi $t4, $t4, 0x00FF0000 
-	srl $t4, $t4, 16
-	sb $t4, 16($t3)
-	lb $t4, newline
-	sb $t4, 17($t3)
-	li $t5, 1
-	lb $t4, newline($t5)
-	sb $t4, 18($t3)
-	        
-	la $a0, prevGuessString	
-	jal printText
-	
-	addi $t1, $t1, 1
-	j prevGuessLoop	
-exitPrevGuess:	
-	pop($ra)
-	jr $ra		
+	jal endGame		

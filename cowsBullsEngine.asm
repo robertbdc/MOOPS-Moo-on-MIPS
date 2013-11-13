@@ -65,7 +65,8 @@ numberOfCowsString:
 	.include "previousGuesses.asm"
 	.include "checkguess.asm"
 	.include "CpuGuess.asm"
-
+	.include "music.asm"
+	
 main:
 	la $a0, humanPromptText
 	jal printText
@@ -165,12 +166,19 @@ humanTurnCallback:
 	andi $a0, $s5, 0x000000F0
 	srl $a0, $a0, 4
 	jal printInteger
+
+	move $t0, $a0
 	
 	la $a0, numberOfCowsString
 	jal printText
 	
 	andi $a0, $s5, 0x0000000F
 	jal printInteger
+	
+	move $a1, $a0
+	move $a0, $t0
+	jal playCowsAndBulls
+	
 	jal printNewline
 	jal printNewline	
 	storeArrayHalfWord(playerPreviousResults, turnNumber, $s5)	#save the result in the array of results

@@ -3,7 +3,7 @@ errorCode:
 	.asciiz "ERR" #will be null terminated, so 4 chars total
 	.align 2	
 returnString:
-	.space 4
+	.space 5
 	.align 2	
 	
 	.text

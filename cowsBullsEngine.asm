@@ -54,7 +54,10 @@ numberOfBullsString:
 		.align 2
 numberOfCowsString:
 		.asciiz " Number of Cows: "
-		.align 2		
+		.align 2	
+turnString:
+	.asciiz "                  Turn 0x"
+	.align 2			
 .text
 
 .globl main
@@ -122,6 +125,41 @@ main:
 	
 ############ human turn ####################	
 humanTurnCallback:
+	la $a0, seperatorText
+	jal printText
+	la $a0, turnString
+	jal printText
+	lw $a0, turnNumber 
+	jal itoa
+	move $t0, $v0          #t0 has address of turn # string
+	sb $zero, 5($t0)#############################################################
+   removeLeadingZeros:	
+	lw $t1, ($t0)            #t1 has the turn string	
+	andi $t2, $t1, 0x00FFFFFF #three leading zeros
+	bne $t2, 0x00303030, check2leading
+     handle3leading:
+        #andi $t1, $t1, 0xFF000000
+        #ori $t1, $t1, 0x00202020
+        srl $t1, $t1, 24
+        sw $t1, ($t0)
+        j printIt	
+     check2leading:
+        andi $t2, $t1, 0x0000FFFF #two leading zeros
+	bne $t2, 0x00003030, check1leading	
+     handle2leading:
+     	srl $t1, $t1, 16
+        sw $t1, ($t0)
+        j printIt
+     check1leading:
+        andi $t2, $t1, 0x000000FF #one leading zeros
+	bne $t2, 0x00000030, printIt	
+     handle1leading:
+        srl $t1, $t1, 8
+        sw $t1, ($t0)
+        j printIt	
+     printIt:
+     	move $a0, $t0	
+	jal printText
 	la $a0, seperatorText
 	jal printText
 	#la $a0, playerPrevGuessHeader

@@ -57,3 +57,78 @@ Answer: 83A6
     (2B4D: remove D, it's a Goat)
     2B46: Bovines = 1
     Done with Phase 1, we have 81A3 with 3 Bovines, and 2B46 with 1 Bovine.
+
+Raw docs for subsequent phases
+==============================
+
+    End phase 1, we have a block with 3 cows. (wonder if we ever *don't* get there?)
+    We can't get past here with what we have, because our hardcodes don't include all possibilities
+
+
+    Phase 2
+    (future: Order each by likelihood. No order-by right now.)
+    Start swapping from 1-cow into 3-cow
+
+    if cows = 4, done
+
+    if cows = 2:
+    * swapped-out digit is a cow (definite yes)
+    * swapped-in digit is a goat (definite no)
+    * Pick next digit from each and repeat
+
+    if cows = 3, swapped-out digit and swapped-in digit are the same type. Go to phase 3.
+
+
+    Phase 3
+    We have a digit in the 3-cow and a digit in the 1-cow that are the same type
+
+    Get next digit from the 1-cow, swap it with current digit from the 3-cow
+
+    if cows = 4, done
+
+    if cows = 3:
+    * swapped-out digit is a goat (definite no)
+    * old swapped-in digit is a goat (definite no)
+    * new swapped-in digit is a goat (definite no)
+    * Go to phase 4b
+
+    if cows = 2:
+    * swapped-out digit is a cow (definite yes)
+    * old swapped-in digit is a cow (definite yes)
+    * new swapped-in digit is a goat (definite no)
+    * Go to phase 4a
+
+
+    Phase 4a
+    We have a 3-cow, and a known good digit from 1-cow
+
+    Swap known good digit with unknown digit in 3-cow
+
+    if cows = 4, done
+
+    if cows = 3:
+    * swapped-out digit is a cow (definite yes)
+    * Repeat phase 4a
+
+
+    Phase 4b
+    We have a 3-cow and we know which digit is bad, but we don't know which digit in 1-cow is good
+    Only 2 choices at this point, though.
+
+    Swap first unknown. If cows = 4, done, else swap second unknown and that's it.
+
+
+    Phase 2+ test
+    ex: 8B5C
+
+    3-cow: EB85
+    1-cow: FC96
+
+    Phase 2
+    swap 3/ch1 w 1/ch1: FB85, cows = 3: E & F are the same type
+
+    Phase 3
+    swap 3/ch1 w 2/ch2: CB85, cows = 4: done
+
+    Phase 4
+    rearrange until we get 4 bulls (should be relatively simple, right?)

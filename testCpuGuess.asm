@@ -13,7 +13,30 @@ inpbuffer:
 	.byte 127
 
 	.text 
-testprogram:
+## Copied Stack functions from helper.asm
+############################## stack ##################################	
+#TODO: implement moving the frame pointer ($fp)
+
+# Function which pushes address to stack.
+# Params:
+#	%a - address to be pushed to stack
+		
+.macro push(%a)
+	addi $sp, $sp, -4
+	sw %a, ($sp) #push onto the stack 
+.end_macro
+
+# Function which pops stack.
+# Params:
+#    %popped - the register which will hold the popped address
+	
+.macro pop(%popped)
+	lw %popped, ($sp) #pop the stack
+	addi $sp, $sp, 4
+.end_macro
+
+
+main:
 	addi	$s1, $zero, 65	# count up from guess A
 
 testloop:	

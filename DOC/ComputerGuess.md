@@ -58,6 +58,40 @@ Answer: 83A6
     2B46: Bovines = 1
     Done with Phase 1, we have 81A3 with 3 Bovines, and 2B46 with 1 Bovine.
 
+#Phase 2: Swap bad for good until we learn something
+
+We have a set of four digits, three of which are bovines. We have another set of four digits, one of which is a bovine.
+
+If we swap a digit from the 1-bovine into the 3-bovine, one of three things can happen to the bovine count - all of which tell us something about the digits we're comparing.
+
+##Bovines = 4
+Success! Go to Phase ? (swap positions until we have 4 bulls)
+
+##Bovines = 3
+The swapped-out digit and the swapped-in digit are the same type. Go to Phase 3 (find the oddball).
+
+##Bovines = 2
+The swapped-out digit is a definite bovine, and the swapped-in digit is a definite goat. Mark the digits, and repeat Phase 2.
+
+#Phase 3: Find the oddball
+
+We have a digit in our 3-bovine that is the same type as a digit in our 1-bovine. If they are both goats, then we know about all the digits of the 3-bovine. If they are both bovines, we know about all the digits of the 1-bovine.
+
+Our next guess will tell us which one it is. Get the next digit from the 1-bovine. It will be the opposite of our unknown.
+
+Swap that digit with the unknown digit of the 3-bovine and interpret the result:
+
+##Bovines = 4
+Success! Go to Phase ? (swap positions until we have 4 bulls)
+
+##Bovines = 3
+
+
+##Bovines = 2
+ 
+
+
+
 Raw docs for subsequent phases
 ==============================
 

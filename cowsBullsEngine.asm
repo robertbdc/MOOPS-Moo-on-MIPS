@@ -68,6 +68,9 @@ cheat_soff:
 	.align 2			
 muteCows:	# Set to nonzero to make the cows shut UP.
 	.word 0
+cheat_look:
+	.ascii "look"
+	.align 2
 cheat_exit:
 	.ascii "exit"
 	.align 2
@@ -119,11 +122,6 @@ main:
 	sb $t1, ($t2)		#store off the value
 	addi $s3, $s3, 1
 	bne $s3, 4, genLoop	#if we don't have 4 numbers	
-	jal printNewline
-	la $a0, computerPromptText #this is all for debugging purposes
-	jal printText
-	move $a0, $s0
-	jal printText #print the comp's secret number
 	jal printNewline
 	move $a0, $s0
 	jal atoi
@@ -250,12 +248,27 @@ handleInvChar:
 	# Is it a cheat code?
 	lw $t9, cheat_soff
 	beq $s6, $t9, cheatShutUp
+	lw $t9, cheat_look
+	beq $s6, $t9, cheatLook
 	lw $t9, cheat_exit
 	beq $s6, $t9, cheatExit
 	j justPlainInvalid
 cheatShutUp:
 	addi $t9, $zero, 0xFF
 	sw $t9, muteCows	# nonzero = shut up
+	j cheatDone
+cheatLook:
+	jal printNewline
+	la $a0, computerPromptText #this is all for debugging purposes
+	jal printText
+	lw $a0, computerSecretNumber
+	jal itoa
+	# move 4 bytes at 0($v0) to buffer and add a /0
+	lw $t9, 0($v0)
+	la $a0, playerInputBuffer
+	sw $t9, 0($a0)
+	sw $zero, 4($a0)
+	jal printText #print the comp's secret number
 	j cheatDone
 cheatExit:
 	# future: add confirmation?

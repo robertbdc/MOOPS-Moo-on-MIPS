@@ -6,6 +6,8 @@ playerSecretNumber:
 computerSecretNumber:
 		.space 32
 		.align 2
+computerLastGuessResult:
+		.word 0xFF # first time, contents don't matter
 		
 humanPromptText:
 		.asciiz "Please input your secret number in hex: "
@@ -296,18 +298,9 @@ errorOut:
 	
 ############ computer turn ####################	
 computerTurnCallback:
-	#TODO: call function for computer guess
-	lw $t0, turnNumber
-	bgt $t0, 1, getPreviousResult
-  initialSetup:
-	add	$a0, $zero, $zero
-	j callAI
-  getPreviousResult:
-	pop($a0)
-  callAI:
+	lw $a0, computerLastGuessResult # is 0xFF the first time, will be ignored
 	jal	cpuguess
   storeResult:
-	push($v0)
 	add	$s0, $zero, $v0	# save guess
 	
 	# convert integer in $a0 back to ascii for display
@@ -325,6 +318,7 @@ computerTurnCallback:
 	lw $a1, playerSecretNumber
 	jal checkguess
 	storeArrayHalfWord(computerPreviousResults, turnNumber, $v0)	#save the result in the array of results
+	sw $v0, computerLastGuessResult	# save the result for sending back to the AI
 	move $t1, $v0 
    #check for win
 	andi $t0, $t1, 0x000000F0

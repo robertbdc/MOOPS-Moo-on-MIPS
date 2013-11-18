@@ -80,5 +80,5 @@ done:
 	syscall
 
 #.include "checkguess.asm"
-.include "CpuGuess.asm"
-.include "hexIntConversion.asm"
+.include "../cpuGuess.asm"
+.include "../hexIntConversion.asm"

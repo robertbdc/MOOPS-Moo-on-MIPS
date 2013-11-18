@@ -58,6 +58,19 @@ numberOfCowsString:
 turnString:
 	.asciiz "                  Turn 0x"
 	.align 2			
+
+# cheat codes
+cheatCodePrompt:
+	.asciiz "\nCheat code accepted, you rascal.\n"
+	.align 2			
+cheat_soff:
+	.ascii "soff" # not asciiz
+	.align 2			
+muteCows:	# Set to nonzero to make the cows shut UP.
+	.word 0
+cheat_exit:
+	.ascii "exit"
+	.align 2
 .text
 
 .globl main
@@ -173,7 +186,7 @@ humanTurnCallback:
 	la $a0, playerInputBuffer	#the input buffer for the
 	li $a1, 5			#max number of characters
 	jal readString
-	lw $s6, ($a0)   #s6 has the string read in
+	lw $s6, ($a0)   # s6 has the string read in
 	jal atoi
 	beq $v0, -1, handleInvChar #ERROR:number uses invalid characters
 	move $a0, $v0
@@ -213,9 +226,12 @@ humanTurnCallback:
 	andi $a0, $s5, 0x0000000F
 	jal printInteger
 	
+	lw $t9, muteCows # If the cows are keeping the chickens awake, make them be quiet!
+	bne $t9, $zero, noPlayCows
 	move $a1, $a0
 	move $a0, $t0
 	jal playCowsAndBulls
+noPlayCows:
 	
 	jal printNewline
 	jal printNewline	
@@ -227,12 +243,32 @@ humanTurnCallback:
 playerWin:
 	la $a0, playerWinPrompt
 	jal printText
-	jal endGame
+	j endGame	# terminates program
 	
 # error handling 
 handleInvChar:
+	# Is it a cheat code?
+	lw $t9, cheat_soff
+	beq $s6, $t9, cheatShutUp
+	lw $t9, cheat_exit
+	beq $s6, $t9, cheatExit
+	j justPlainInvalid
+cheatShutUp:
+	addi $t9, $zero, 0xFF
+	sw $t9, muteCows	# nonzero = shut up
+	j cheatDone
+cheatExit:
+	# future: add confirmation?
+	jal printNewline
+	j endGame	# terminates program
+
+cheatDone:
+	la $a0, cheatCodePrompt
+	j errorOut
+justPlainInvalid:			
 	la $a0, invCharPrompt
 	j errorOut
+
 handleReusedDigit:
 	la $a0, reusedDigitPrompt
 	j errorOut
@@ -308,4 +344,4 @@ computerTurnCallback:
 computerWin:
 	la $a0, computerWinPrompt
 	jal printText
-	jal endGame		
+	j endGame	# terminates program	

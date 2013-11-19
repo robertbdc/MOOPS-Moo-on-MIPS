@@ -128,20 +128,20 @@ We will always have 0, 1, or 2 known Bulls. If we had 3 Bulls, the remaining dig
 When we swap any 2 unknown digits, a limited number of things can happen:
 
 * Count increases from 0 to 2: both are now Bulls
-Switch the other two. (Definite Win!)
+ * Switch the other two. (Definite Win!)
 
 * Count drops from 2 to 0: both were originally Bulls
-Flip back, flip the other two. (Definite Win!)
+ * Flip back, flip the other two. (Definite Win!)
 
 * Count unchanged at 0: both were cows before and after.
-Swap with the other two. Either they'll both be Bulls, or swapping them will make them both Bulls. (Phase 4 Mode 1, need to figure some more)
+ * Swap with the other two. Either they'll both be Bulls, or swapping them will make them both Bulls. (Phase 4 Mode 1, need to figure some more)
 
 * Count increases by 1: one is now a Bull, but we don't know which one. 
-** 0 to 1: keep these and switch the other two
-** 1 to 2: keep these and switch the middle two
+ * 0 to 1: keep these and switch the other two
+ * 1 to 2: keep these and switch the middle two
 
 * Count drops by 1: one was originally a Bull, but we don't know which one
-** 2 to 1: flip back and switch the other two
-** 1 to 0: flip back and switch the middle two
+ * 2 to 1: flip back and switch the other two
+ * 1 to 0: flip back and switch the middle two
 
 ###Phase 4 Mode X: need to figure out endgames

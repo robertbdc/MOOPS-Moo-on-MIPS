@@ -65,7 +65,7 @@ We have a set of four digits, three of which are bovines. We have another set of
 If we swap a digit from the 1-bovine into the 3-bovine, one of three things can happen to the bovine count - all of which tell us something about the digits we're comparing.
 
 ##Bovines = 4
-Success! Go to Phase ? (swap positions until we have 4 bulls)
+Success! Go to Phase 4 (have cows, get bulls)
 
 ##Bovines = 3
 The swapped-out digit and the swapped-in digit are the same type. Go to Phase 3 (find the oddball).
@@ -77,92 +77,71 @@ The swapped-out digit is a definite bovine, and the swapped-in digit is a defini
 
 We have a digit in our 3-bovine that is the same type as a digit in our 1-bovine. If they are both goats, then we know about all the digits of the 3-bovine. If they are both bovines, we know about all the digits of the 1-bovine.
 
-Our next guess will tell us which one it is. Get the next digit from the 1-bovine. It will be the opposite of our unknown.
+Our next guess will tell us which one it is. This is Phase 3 Mode 0. Get the next digit from the 1-bovine.
+
+Terminology:
+* digitfm3 = unknown digit from the 3-bovine
+* digitfm1 = unknown digit from the 1-bovine
+* newdigit = another digit from the 1-bovine
 
 Swap that digit with the unknown digit of the 3-bovine and interpret the result:
 
 ##Bovines = 4
-Success! Go to Phase ? (swap positions until we have 4 bulls)
+Success! digitfm3 was a Goat, newdigit was the Bovine. Go to Phase 4 (have cows, get bulls)
 
 ##Bovines = 3
+The Bovine count didn't change. digitfm1, newdigit, and digitfm3 are all Goats. All the other digits in the 3-Bovine are Bovines.
 
+Now we have 3 known Bovines, and the last known Bovine is in the 1-bovine. And we've eliminated two unknowns.
+
+*If we only have one unknown left, it's a Bovine. Swap it in and go to Phase 4 (have cows, get bulls)
+*If we have two unknowns left, swap one of them as the next guess. That will give you 4 Bovines, or you know which is the last Bovine. This is Phase 3 Mode 1.
 
 ##Bovines = 2
- 
+digitfm3 was a Bovine. digitfm1 is the only Bovine in the 1-bovine.
 
+Now we have 1 known Bovine, and one of the unknowns in the 3-bovine is a Goat.
 
+* If we only have one unknown left, it's a Goat. Swap it out and go to Phase 4 (have cows, get bulls)
+* If we have 2 or 3 unknowns, swap one of them as the next guess. Repeat until we only have one unknown left. This is Phase 3 Mode 2.
 
-Raw docs for subsequent phases
-==============================
+#Phase 4: Arrange Cows to find Bulls
 
-    End phase 1, we have a block with 3 cows. (wonder if we ever *don't* get there?)
-    We can't get past here with what we have, because our hardcodes don't include all possibilities
+##Tracking Bulls vs. Cows
 
+For each of our Cows, we can use four bits to indicate whether it might be a Bull in a specific position. For example:
 
-    Phase 2
-    (future: Order each by likelihood. No order-by right now.)
-    Start swapping from 1-cow into 3-cow
+    0000 - we don't know where it's a Bull (0 = available, so we can initialize to 0x0)
+    1001 - can only be a Bull in the second or third position
+    1101 - it's a Bull in the third position
 
-    if cows = 4, done
+So for each of our Cows, we will track its possible Bull positions.
 
-    if cows = 2:
-    * swapped-out digit is a cow (definite yes)
-    * swapped-in digit is a goat (definite no)
-    * Pick next digit from each and repeat
+##Possibilities
 
-    if cows = 3, swapped-out digit and swapped-in digit are the same type. Go to phase 3.
+We will always have 0, 1, or 2 known Bulls. If we had 3 Bulls, the remaining digit could not be a Cow. If we had 4 Bulls, we would be done!
 
+##Modes
 
-    Phase 3
-    We have a digit in the 3-cow and a digit in the 1-cow that are the same type
+###Phase 4 Mode 0: swap 2 unknown digits
 
-    Get next digit from the 1-cow, swap it with current digit from the 3-cow
+When we swap any 2 unknown digits, a limited number of things can happen:
 
-    if cows = 4, done
+* Count increases from 0 to 2: both are now Bulls
+Switch the other two. (Definite Win!)
 
-    if cows = 3:
-    * swapped-out digit is a goat (definite no)
-    * old swapped-in digit is a goat (definite no)
-    * new swapped-in digit is a goat (definite no)
-    * Go to phase 4b
+* Count drops from 2 to 0: both were originally Bulls
+Flip back, flip the other two. (Definite Win!)
 
-    if cows = 2:
-    * swapped-out digit is a cow (definite yes)
-    * old swapped-in digit is a cow (definite yes)
-    * new swapped-in digit is a goat (definite no)
-    * Go to phase 4a
+* Count unchanged at 0: both were cows before and after.
+Swap with the other two. Either they'll both be Bulls, or swapping them will make them both Bulls. (Phase 4 Mode 1, need to figure some more)
 
+* Count increases by 1: one is now a Bull, but we don't know which one. 
+** 0 to 1: keep these and switch the other two
+** 1 to 2: keep these and switch the middle two
 
-    Phase 4a
-    We have a 3-cow, and a known good digit from 1-cow
+* Count drops by 1: one was originally a Bull, but we don't know which one
+** 2 to 1: flip back and switch the other two
+** 1 to 0: flip back and switch the middle two
 
-    Swap known good digit with unknown digit in 3-cow
-
-    if cows = 4, done
-
-    if cows = 3:
-    * swapped-out digit is a cow (definite yes)
-    * Repeat phase 4a
-
-
-    Phase 4b
-    We have a 3-cow and we know which digit is bad, but we don't know which digit in 1-cow is good
-    Only 2 choices at this point, though.
-
-    Swap first unknown. If cows = 4, done, else swap second unknown and that's it.
-
-
-    Phase 2+ test
-    ex: 8B5C
-
-    3-cow: EB85
-    1-cow: FC96
-
-    Phase 2
-    swap 3/ch1 w 1/ch1: FB85, cows = 3: E & F are the same type
-
-    Phase 3
-    swap 3/ch1 w 2/ch2: CB85, cows = 4: done
-
-    Phase 4
-    rearrange until we get 4 bulls (should be relatively simple, right?)
+###Phase 4 Mode X: need to figure out endgames

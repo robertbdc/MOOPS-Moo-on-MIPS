@@ -13,7 +13,7 @@
 # Registers used (preserved on stack)
 #		$s0 = current guess
 #		$s1 = current phase
-#		$s2 = current round (within phase)
+#		$s2 = current mode or pointer (within phase)
 #		$s3 = previous guess
 #		$s4 = bovine count (bulls + cows)
 # Commonly used temps (for reference when debugging):
@@ -24,7 +24,7 @@
 #		$t4 = 
 #		$t5 = 
 #		$t7 = rotating previous guess
-#		$t8 = 
+#		$t8 = bulls (for Phase 4)
 #		$t9 = scratch
 
 .data
@@ -56,13 +56,9 @@ set3:
 	.byte 4,1,0xE,0xB
 	.byte 8,5,2,0xF
 outofguesses:
-	.word 0xFF	# Just want this label to check for "out of options"
-curset:
-	.word 0 # current set
-curdigit:
-	.word 0 # *digit* position within set (0-16)
-digitpointer:
-	.word 0 # for now, just point to current digit (will be replaced by set/digit logic)
+	.word 0xFFFFFFFF	# Just want this label to check for "out of options"
+digitoffset:
+	.word 0 # points to current digit. 0xXY: X = set, Y = digit
 
 phase:
 	.word 0 # Current phase
@@ -78,6 +74,9 @@ cows3:
 cows1:
 	.word 0 # the guess that has 1 cow
 
+errortext:
+	.asciiz "\nThe computer had to give up and start over!\n"
+
 .text
 
 #.globl cpuguess
@@ -90,6 +89,7 @@ cpuguess:
 	push ($s2)
 	push ($s3)
 	push ($s4)
+	push ($ra)
 
 	lw	$s1, phase
 	beq	$s1, $zero, firstguess	# no previous guess
@@ -97,15 +97,18 @@ cpuguess:
 	# Store result of previous guess and get cattle count
 	sw	$a0, result		# Result of last guess
 	lw	$s3, curguess		# Last guess made
-	andi	$t9, $a0, 0x00F0
-	srl	$t9, $t9, 4		# bulls
-	andi	$s4, $a0, 0x000F	# cows
-	add	$s4, $s4, $t9		# total cattle count in $s4
+	andi	$t8, $a0, 0x00F0
+	srl	$t8, $t8, 4		# bulls (in $t8 for use by Phase 4)
+	andi	$t9, $a0, 0x000F	# cows (in $t9 for temp use below)
+	add	$s4, $t9, $t8		# total cattle count in $s4
+	
+	# If we have 4 cows, we don't need to add to counters.
+	beq	$t9, 4, phase4check	# Have 4 cows!
 	
 	# Add to digit counters
 	# Add bovine count to all the digits in last guess ($s3)
 	add	$t9, $zero, $zero	# counter
-	add $t7, $s3, $zero # put guess in temp reg 
+	add	$t7, $s3, $zero		# put guess in temp reg 
 	beq	$s4, $zero, allgoats	# Unless it's zero - that means none are possible, all can be discarded
 hasbovines:
 	andi	$t3, $t7, 0x000F	# digit of last guess
@@ -133,70 +136,88 @@ allgoatslp:
 digitloopdone:
 	# todo: add checks to skip phases, and for if all chars in set are used
 
-	# go to current phase
+	# go to current cow-finding phase
 	beq	$s1, 1, phase1check
 	beq	$s1, 2, phase2check
 	beq	$s1, 3, phase3check
-	beq	$s1, 4, phase4check # 4a
-	beq	$s1, 5, phase5check # 4b
 	# If we fall through, there's an error.
 	j error
 
 firstguess:
-	# initialize
+	# initialize (note we end up here on error, too)
 	addi	$t9, $zero, 1
 	sw	$t9, phase # phase 1
-	la	$t9, set0 # for now, point at first digit in our list
-	sw	$t9, digitpointer
+	add	$s2, $zero, $zero	# initial offset = 0
+	sw	$s2, digitoffset # point at first digit in the list
 	j	phase1play
 
 phase1check:
-	# Last guess has 0-4 bovines
-	# If it has 1, save it in cow1 and see if we have 3+1
-	# If it has 3, save it in cow3 and see if we have 3+1
-	# If it has 4, skip to bullfinder!
-	# todo: implement
+	# If the last digit of the offset is 0, we started a new set
+	lw	$s2, digitoffset
+	andi	$t9, $s2, 0x000F
+	beq	$t9, $zero, ph1clear 
 	
-	# todo: If we have 4 total bovines in this set, mark the rest of set as goats, move to next set
+	# Last guess has 0-3 bovines
+	# If it has 0, no effect
+	# If it has 1, save it in cows1 and see if we have 3+1
+	# If it has 2, we can't have 3+1
+	# If it has 3, save it in cows3 and see if we have 3+1
+	beq	$s4, 3, ph1save3
+	beq	$s4, 2, ph1clear
+	beq	$s4, 1, ph1save1
+	j	phase1play	# 0 or 2, so we don't have 3+1
+ph1save3:
+	sw	$s3, cows3
+	add	$t4, $zero, $s3	# t4 = cows3
+	lw	$t5, cows1	# t5 = cows1
+	j	ph1chk31
+ph1save1:
+	lw	$t9, cows1	# do we already have a 1?
+	beq	$t9, $zero, phase1play	# we already have a 1, so we can't have 3+1
+	sw	$s3, cows1
+	add	$t5, $zero, $s3	# t5 = cows1
+	lw	$t4, cows3	# t4 = cows3
+	# fall through to ph1chk31
+ph1chk31:
+	beq	$t4, $zero, phase1play
+	beq	$t5, $zero, phase1play
+	# We have a 1-cow and a 3-cow! Go to Phase 2!
+	addi	$t9, $zero, 2
+	sw	$t9, phase # phase 2
+	j	phase2check
 	
-	# todo: If we're at the start of a set, reset cow1
-	
+ph1clear:
+	# We don't have 3+1 in this set (or we just started)
+	sw	$zero, cows1
+	sw	$zero, cows3
+	# fall through to phase1play
+		
 phase1play:
-	# todo: Get word pointed to by curset + curdigit
-	# (values were incremented at end of last check, initialized to 0/0)
-#	lw $t2, curset # 0-3
-#	sll $t2, $t2, 4 # * 16 = position of set relative to set0
-#	lw $t3, curdigit # 0-16
-#	add $t2, $t2, $t3
-	# for now: get raw pointer
-	lw	$t2, digitpointer
-	# $t2 now points to the next character (offset from set0)
+	# todo: If we have 4 total bovines in this set, mark the rest of set as goats, move to next set
+
 	# we want to end up with our next guess in $s0
 	add	$s0, $zero, $zero	# init guess
 	add	$t9, $zero, $zero	# init counter
 	addi	$t8, $zero, 0xFF	# catch out of bounds error
 
 getchar:
-	lb	$t1, 0($t2)	# get the character into $t1
+	# Get word pointed to by offset
+	lb	$t1, set0($s2)	# Get digit at offset into $t1
+	addi	$s2, $s2, 1	# bump pointer to next digit
 	beq	$t1, $t8, error	# oops, we ran out of guesses!
 	sll	$t5, $t1, 2		# turn the character into a word
 	lw	$t4, possibles($t5)	# current count for this char
-	blt	$t4, $zero, p1nextdigit # if this digit is a goat (poss=-1), get another one
+	blt	$t4, $zero, getchar	# if this digit is a goat (poss=-1), get another one
 	# if we're here, we have a good digit in $t1
 	sll	$s0, $s0, 4	# make a spot
 	or	$s0, $s0, $t1	# put digit in the spot
 	beq	$t9, 3, phase1done
 	addi	$t9, $t9, 1	# bump counter
-p1nextdigit:
-	addi	$t2, $t2, 1	# point to next digit
 	j	getchar
 	
 phase1done:
-	# save position of next digit
-	addi	$t2, $t2, 1	# point to next digit
-	# todo: we have the raw pointer, need to turn it back into a set and a digit
-	# for now, we'll just save the raw pointer
-	sw	$t2, digitpointer
+	# Save position of next digit
+	sw	$s2, digitoffset
 	add	$v0, $s0, $zero
 	j	guessmade
 	
@@ -214,9 +235,11 @@ phase5check: # 4b
 # returns
 
 error:
-	# Return something very invalid.
-	addi	$v0, $zero, 0xFFFFFFFF
-	# fall through to guessmade
+	# Start back at the beginning, just so we're doing something.
+	la $a0, errortext
+	jal printText
+	# Return to Phase 0
+	j	firstguess	 # If things are strange, BREAKPOINT here #############
 
 guessmade:
 	# $v0 contains the current guess
@@ -224,6 +247,7 @@ guessmade:
 	sw	$v0, curguess 
 
 	# use standard macro to restore registers
+	pop ($ra)
 	pop ($s4)
 	pop ($s3)
 	pop ($s2)

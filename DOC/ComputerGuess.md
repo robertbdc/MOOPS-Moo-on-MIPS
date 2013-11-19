@@ -58,6 +58,9 @@ Answer: 83A6
     2B46: Bovines = 1
     Done with Phase 1, we have 81A3 with 3 Bovines, and 2B46 with 1 Bovine.
 
+###Issue:
+Some sequences fall through the entire hardcoded list without ever getting to 3 Bovines. Examples: A68E. Need to find the pattern and find a workaround. May have to add a secondary table, or change strategy when we have a 2+1.
+
 #Phase 2: Swap bad for good until we learn something
 
 We have a set of four digits, three of which are bovines. We have another set of four digits, one of which is a bovine.

@@ -31,84 +31,90 @@ The first 16 guesses come from a hardcoded table, similar to a set of hardcoded 
 
 After set 0 has been processed, we may or may not have some known Goats. Any Goats will be removed from consideration in subsequent attempts.
 
-Continue until we are down to two guesses, one with three Bovines, and the other with one Bovine. (Or until we run out of digits - behavior at this point is uncertain, will probably cycle back to top.)
+Continue until we are down to two guesses, one with two Bovines, and the other with one or two Bovines.
 
 For example:
 
-Answer: 83A6
+Answer: 83AD
 
     0123: Bovines = 1 (1 cow, no bulls)
     4567: Bovines = 1
-    89AB: Bovines = 2 (2 bulls, but we're not tracking that in this version)
-    CDEF: Bovines = 0 (future: we would have skipped this check entirely because we already have 4 Bovines in this set)
-
+    89AB: Bovines = 1 (1 bull, but we're not tracking that in this version)
+    CDEF: Bovines = 1
+    
     (Now in Set 1)
-    (49E3: remove E, it's a Goat)
-    4938: Bovines = 2
-    (D27C: remove C/D, they're Goats)
-    2716: Bovines = 1
-    B05A: Bovines = 1
-    (F: it's a Goat)
+    49E3: Bovines = 1
+    8D27: Bovines = 2
+    Done with Phase 1, we have 49E3 with 1 Bovine, and 8D27 with 2 Bovines.
 
-    (Now in Set 2)
-    81A3: Bovines = 3
-    (C5E7: remove C/E, they're Goats)
-    5709: Bovines = 0 (all Goats)
-    (2B4D: remove D, it's a Goat)
-    2B46: Bovines = 1
-    Done with Phase 1, we have 81A3 with 3 Bovines, and 2B46 with 1 Bovine.
-
-###Issue:
-Some sequences fall through the entire hardcoded list without ever getting to 3 Bovines. Examples: A68E. Need to find the pattern and find a workaround. May have to add a secondary table, or change strategy when we have a 2+1.
+A previous algorithm continued until we had 3 Bovines, but sometimes that doesn't happen at all (A68E, for example).
 
 #Phase 2: Swap bad for good until we learn something
 
-We have a set of four digits, three of which are bovines. We have another set of four digits, one of which is a bovine.
+We have a set of four digits, two or more of which are bovines. We have another set of four digits, one or two of which is a bovine.
 
-If we swap a digit from the 1-bovine into the 3-bovine, one of three things can happen to the bovine count - all of which tell us something about the digits we're comparing.
+##Terminology
 
-##Bovines = 4
-Success! Go to Phase 4 (have cows, get bulls)
+* Pen: Our primary guess. We will keep the known Bovines here until all four digits are Bovines
+* Field: Other possible bovines. We will swap in from here until we find a Bovine.
 
-##Bovines = 3
-The swapped-out digit and the swapped-in digit are the same type. Go to Phase 3 (find the oddball).
+##Modes
 
-##Bovines = 2
-The swapped-out digit is a definite bovine, and the swapped-in digit is a definite goat. Mark the digits, and repeat Phase 2.
+###Pre-check
 
-#Phase 3: Find the oddball
+* If we have 1 known Bovine in the Field, go to Phase 2, Mode 3
+* If we have 3 known Bovines in the Pen, go to Phase 2, Mode 4
 
-We have a digit in our 3-bovine that is the same type as a digit in our 1-bovine. If they are both goats, then we know about all the digits of the 3-bovine. If they are both bovines, we know about all the digits of the 1-bovine.
+###Phase 2, Mode 0: Multiple unknowns in both Pen and Field
 
-Our next guess will tell us which one it is. This is Phase 3 Mode 0. Get the next digit from the 1-bovine.
+If we swap a digit from the Field into the Pen, one of three things can happen to the Bovine count - all of which tell us something about the digits we're comparing.
 
-Terminology:
-* digitfm3 = unknown digit from the 3-bovine
-* digitfm1 = unknown digit from the 1-bovine
-* newdigit = another digit from the 1-bovine
+* Bovines increase: Digit from Pen is a Goat, Digit from Field is a Bovine. Keep digits swapped and repeat Phase 2 until we have 4 Bovines.
+* Bovines decrease: Digit from Pen is a Bovine, Digit from Field is a Goat. Swap back to original places and repeat Phase 2
+* Bovines same: Digit from Pen is the same type as Digit from Field, but what is it? Swap back to original places, save Pen digit as PenA, and go to Mode 1.
 
-Swap that digit with the unknown digit of the 3-bovine and interpret the result:
+###Phase 2, Mode 1: Multiple unknowns, but one in the Pen is the same as the one in the Field
 
-##Bovines = 4
-Success! digitfm3 was a Goat, newdigit was the Bovine. Go to Phase 4 (have cows, get bulls)
+We have a digit from the Pen (PenA) and the same digit from the Field, and we know they're the same, but which are they?
 
-##Bovines = 3
-The Bovine count didn't change. digitfm1, newdigit, and digitfm3 are all Goats. All the other digits in the 3-Bovine are Bovines.
+To find out, swap Field with another unknown digit in the Pen (PenB). Again, one of three things can happen to the Bovine count:
 
-Now we have 3 known Bovines, and the last known Bovine is in the 1-bovine. And we've eliminated two unknowns.
+* Bovines increase: PenB is a Goat, Field is a Bovine, PenA is a Bovine. Put the Bovines in the Pen and repeat Phase 2.
+* Bovines decrease: PenB is a Bovine, Field is a Goat, PenA is a Goat. Put the Bovines in the Pen and repeat Phase 2.
+* Bovines same: PenB, Field, and PenA are the same. Swap back to original places and go to Mode 2.
 
-*If we only have one unknown left, it's a Bovine. Swap it in and go to Phase 4 (have cows, get bulls)
-*If we have two unknowns left, swap one of them as the next guess. That will give you 4 Bovines, or you know which is the last Bovine. This is Phase 3 Mode 1.
+###Phase 2, Mode 2: Multiple unknowns, but two in the Pen are the same as the one in the Field
 
-##Bovines = 2
-digitfm3 was a Bovine. digitfm1 is the only Bovine in the 1-bovine.
+We already know that our Pen contains two Bovines. That means that PenA and PenB are either the only Bovines, or the only Goats. To find out, we have to compare against the third digit in the Pen, PenC. Swap the Field digit with PenC.
 
-Now we have 1 known Bovine, and one of the unknowns in the 3-bovine is a Goat.
+* Bovines increase:
+ * PenC is a Goat
+ * Digit from Field is a Bovine
+ * PenA and PenB are also Bovines, because they're the same as the Field digit.
+* Bovines decrease:
+ * PenC is a Bovine
+ * Digit from Field is a Goat
+ * PenA and PenB are also Goats, because they're the same as the Field digit.
+ * PenD is a Bovine, because we know we started with 2 (or 3) Bovines. If PenA and PenB are Goats, PenC and PenD must be Bovines.
+* Bovines same:
+ * PenC is the same as Field.
+ * We already know that Field is the same as PenA and PenB, so PenA, PenB, PenC, and Field are all the same.
+ * Since our Pen started out with at least 2 Bovines, PenA, PenB, and PenC could not all be Goats.
+ * Therefore, PenA, PenB, PenC, and the Field digit are all Bovines! Go to Phase 3 (have cows, get bulls)
 
-* If we only have one unknown left, it's a Goat. Swap it out and go to Phase 4 (have cows, get bulls)
-* If we have 2 or 3 unknowns, swap one of them as the next guess. Repeat until we only have one unknown left. This is Phase 3 Mode 2.
+###Phase 2, Mode 3: 1 known Bovine in Field
 
-#Phase 4: Arrange Cows to find Bulls
+Once we identify the Bovine in the Field, substitute it for an unknown digit in the Pen.
+
+* Bovines increase: This should get us to 4 Bovines
+* Bovines decrease: _This can't happen!_
+* Bovines same: Digit in Pen is a Bovine. Replace it and repeat Phase 2.
+
+###Phase 2, Mode 4: 3 known Bovines in Pen
+
+Once we have 3 known Bovines, we know the other is a Goat. Replace it with a digit from the Field until Bovines = 4.
+
+#Phase 3: Arrange Cows to find Bulls
 
 ##Tracking Bulls vs. Cows
 
@@ -126,7 +132,7 @@ We will always have 0, 1, or 2 known Bulls. If we had 3 Bulls, the remaining dig
 
 ##Modes
 
-###Phase 4 Mode 0: swap 2 unknown digits
+###Phase 3 Mode 0: swap 2 unknown digits
 
 When we swap any 2 unknown digits, a limited number of things can happen:
 
@@ -137,7 +143,7 @@ When we swap any 2 unknown digits, a limited number of things can happen:
  * Flip back, flip the other two. (Definite Win!)
 
 * Count unchanged at 0: both were cows before and after.
- * Swap with the other two. Either they'll both be Bulls, or swapping them will make them both Bulls. (Phase 4 Mode 1, need to figure some more)
+ * Swap with the other two. Either they'll both be Bulls, or swapping them will make them both Bulls. (Phase 3 Mode 1, need to figure some more)
 
 * Count increases by 1: one is now a Bull, but we don't know which one. 
  * 0 to 1: keep these and switch the other two
@@ -147,4 +153,4 @@ When we swap any 2 unknown digits, a limited number of things can happen:
  * 2 to 1: flip back and switch the other two
  * 1 to 0: flip back and switch the middle two
 
-###Phase 4 Mode X: need to figure out endgames
+###Phase 3 Mode X: need to figure out endgames

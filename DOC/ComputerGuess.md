@@ -62,18 +62,22 @@ We have a set of four digits, two or more of which are bovines. We have another 
 
 ###Pre-check
 
-* If we have 1 known Bovine in the Field, go to Phase 2, Mode 3
-* If we have 3 known Bovines in the Pen, go to Phase 2, Mode 4
+* If we have 1 known Bovine in the Field, go to Phase 2, Mode 4
+* If we have 3 known Bovines in the Pen, go to Phase 2, Mode 5
 
-###Phase 2, Mode 0: Multiple unknowns in both Pen and Field
+###Phase 2, Mode 0: Initialize
+
+At this point, we don't know anything about any individual digits. Initialize counters and go to Mode 1.
+
+###Phase 2, Mode 1: Multiple unknowns in both Pen and Field
 
 If we swap a digit from the Field into the Pen, one of three things can happen to the Bovine count - all of which tell us something about the digits we're comparing.
 
 * Bovines increase: Digit from Pen is a Goat, Digit from Field is a Bovine. Keep digits swapped and repeat Phase 2 until we have 4 Bovines.
 * Bovines decrease: Digit from Pen is a Bovine, Digit from Field is a Goat. Swap back to original places and repeat Phase 2
-* Bovines same: Digit from Pen is the same type as Digit from Field, but what is it? Swap back to original places, save Pen digit as PenA, and go to Mode 1.
+* Bovines same: Digit from Pen is the same type as Digit from Field, but what is it? Swap back to original places, save Pen digit as PenA, and go to Mode 2.
 
-###Phase 2, Mode 1: Multiple unknowns, but one in the Pen is the same as the one in the Field
+###Phase 2, Mode 2: Multiple unknowns, but one in the Pen is the same as the one in the Field
 
 We have a digit from the Pen (PenA) and the same digit from the Field, and we know they're the same, but which are they?
 
@@ -81,9 +85,9 @@ To find out, swap Field with another unknown digit in the Pen (PenB). Again, one
 
 * Bovines increase: PenB is a Goat, Field is a Bovine, PenA is a Bovine. Put the Bovines in the Pen and repeat Phase 2.
 * Bovines decrease: PenB is a Bovine, Field is a Goat, PenA is a Goat. Put the Bovines in the Pen and repeat Phase 2.
-* Bovines same: PenB, Field, and PenA are the same. Swap back to original places and go to Mode 2.
+* Bovines same: PenB, Field, and PenA are the same. Swap back to original places and go to Mode 3.
 
-###Phase 2, Mode 2: Multiple unknowns, but two in the Pen are the same as the one in the Field
+###Phase 2, Mode 3: Multiple unknowns, but two in the Pen are the same as the one in the Field
 
 We already know that our Pen contains two Bovines. That means that PenA and PenB are either the only Bovines, or the only Goats. To find out, we have to compare against the third digit in the Pen, PenC. Swap the Field digit with PenC.
 
@@ -102,7 +106,7 @@ We already know that our Pen contains two Bovines. That means that PenA and PenB
  * Since our Pen started out with at least 2 Bovines, PenA, PenB, and PenC could not all be Goats.
  * Therefore, PenA, PenB, PenC, and the Field digit are all Bovines! Go to Phase 3 (have cows, get bulls)
 
-###Phase 2, Mode 3: 1 known Bovine in Field
+###Phase 2, Mode 4: 1 known Bovine in Field
 
 Once we identify the Bovine in the Field, substitute it for an unknown digit in the Pen.
 
@@ -110,7 +114,7 @@ Once we identify the Bovine in the Field, substitute it for an unknown digit in 
 * Bovines decrease: _This can't happen!_
 * Bovines same: Digit in Pen is a Bovine. Replace it and repeat Phase 2.
 
-###Phase 2, Mode 4: 3 known Bovines in Pen
+###Phase 2, Mode 5: 3 known Bovines in Pen
 
 Once we have 3 known Bovines, we know the other is a Goat. Replace it with a digit from the Field until Bovines = 4.
 

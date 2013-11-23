@@ -29,8 +29,13 @@ main:
 	li $a1, 5
 	la $a0, playerInputBuffer
 	jal readString
-	jal atoi			#get the integer value from the hex string
+	jal atoi			        #get the integer value from the hex string
 	beq $v0, -1, handleInvChar		#if input was invalid, errorOut
+	move $a0, $v0
+	jal checkValidity                       #check for repeated digits
+	move $t1, $v0 
+	andi $t0, $t1, 0xF000	                #check for validity
+	beq $t0, 0x8000, handleReusedDigit      #ERROR: number uses a digit more than once
 	sw $v0, playerSecretNumber
 	
   generateComputerSecretNumber:

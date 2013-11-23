@@ -47,7 +47,7 @@ readInt:
 readString:
 	li $v0, 8
 	syscall
-	jr $ra
+	jr $ra	
 
 ############################## stack ##################################	
 #TODO: implement moving the frame pointer ($fp)
@@ -88,6 +88,60 @@ killProcess:
 	li $v0, 10
 	syscall
 	jr $ra
+
+# Function which takes a 4 digit hex string and converts it to upper case
+# Params:
+#       $a0 - the address containing the string
+# 
+toUpper:
+	move $t1, $a0                  #t1 is effective address of current character
+	li $t9, 0                      #t9 is counter, init it  to 0
+  toUpperLoop: 
+	beq $t9, 4, exitToUpper
+	lb $t0, ($t1)                  #t0 is the current character 
+    check_a:
+    	bne $t0, 0x61, check_b         #0x61 = a in ASCII
+      handle_a:
+        li $t2, 0x41                   #0x41 = A in ASCII
+	sb $t2,($t1)
+	j iterateLoop
+    check_b:
+	bne $t0, 0x62, check_c
+      handle_b:
+        li $t2, 0x42
+	sb $t2,($t1)
+	j iterateLoop
+    check_c:
+	bne $t0, 0x63, check_d
+      handle_c:
+        li $t2, 0x43
+	sb $t2,($t1)
+	j iterateLoop
+    check_d:
+	bne $t0, 0x64, check_e
+      handle_d:
+        li $t2, 0x44
+	sb $t2,($t1)
+	j iterateLoop
+    check_e:
+	bne $t0, 0x65, check_f
+      handle_e:
+        li $t2, 0x45
+	sb $t2,($t1)
+	j iterateLoop
+    check_f:
+	bne $t0, 0x66, iterateLoop
+      handle_f:
+        li $t2, 0x46
+	sb $t2,($t1)
+	j iterateLoop
+    iterateLoop:	
+	addi $t9, $t9, 1
+	addi $t1, $t1, 1
+	j toUpperLoop
+  exitToUpper:
+    	jr $ra	
+    			
 ######################### array stuff #############################################
 	
 # Function which loads a word into the specified register from a word aligned array

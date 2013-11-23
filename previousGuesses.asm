@@ -49,6 +49,9 @@ computerPreviousResults:
 #		0 if the guess has not been guessed
 
 alreadyGuessed:
+	push($ra)
+	jal toUpper
+	pop($ra)
 	lw $t0, ($a0) # t0 has string representing guess
 	move $t1, $a1 # t1 holds the current turn tumber(of the game)
 	li $t2, 1# t2 is counter for current turn number being processed

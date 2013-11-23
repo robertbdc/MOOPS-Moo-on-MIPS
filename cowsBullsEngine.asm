@@ -31,13 +31,13 @@ main:
 	jal readString
 	jal atoi			        #get the integer value from the hex string
 	beq $v0, -1, handleInvChar		#if input was invalid, errorOut
+	sw $v0, playerSecretNumber
 	move $a0, $v0
 	jal checkValidity                       #check for repeated digits
 	move $t1, $v0 
 	andi $t0, $t1, 0xF000	                #check for validity
 	beq $t0, 0x8000, handleReusedDigit      #ERROR: number uses a digit more than once
-	sw $v0, playerSecretNumber
-	
+
   generateComputerSecretNumber:
 	la $s0, computerSecretNumber	#the start of our array of already chosen vars
 	la $s1, filledHexArray
@@ -121,18 +121,15 @@ humanTurnCallback:
 	la $a0, playerInputBuffer	#the input buffer for the
 	li $a1, 5			#max number of characters
 	jal readString
-	lw $s6, ($a0)   # s6 has the string read in
+	lw $s6, playerInputBuffer       #save the input for later
 	jal atoi
 	beq $v0, -1, handleInvChar #ERROR:number uses invalid characters
 	move $a0, $v0
 	lw $a1, computerSecretNumber
 	jal checkguess
 	move $s5, $v0  #s5 has the result from checkguess in it
-	move $s0, $v0
-	#jal printNewline
-	move $a0, $s0
    checkGuessValidity:
-	move $t1, $a0 
+	move $t1, $s5 
 	andi $t0, $t1, 0xF000	#check for validity
 	beq $t0, 0x8000, handleReusedDigit #ERROR: number uses a digit more than once
    checkForWin:
@@ -171,6 +168,9 @@ noPlayCows:
 	jal printNewline
 	jal printNewline	
 	storeArrayHalfWord(playerPreviousResults, turnNumber, $s5)	#save the result in the array of results
+	la $a0, playerInputBuffer
+	jal toUpper
+	lw $s6, playerInputBuffer
 	storeArrayWord(playerPreviousGuess, turnNumber, $s6)            #save the guess in the array of guesses
    exitHumanTurn:		
 	j computerTurn #jump back to the engine

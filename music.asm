@@ -8,14 +8,20 @@
 #
 
 .globl playCowsAndBulls
+.globl playBulls
+.globl playCows
 
 playCowsAndBulls:
-	move $t0, $a0 #bulls
-	move $t1, $a1 #cows
-	add $t2, $t0, $t1
-	li $t3, 4
-	sub $t2, $t3, $t2 #number of misses
+	push($ra)
+	push($a1)
+	jal playBulls
+	pop($a1)
+	jal playCows
+	pop($ra)
+	jr $ra
 	
+playBulls:
+	move $t0, $a0 #bulls
 	li $t9, 0 #index
 	#play bulls
 loopBulls:
@@ -29,8 +35,12 @@ loopBulls:
 	addi $t9, $t9, 1
 	j loopBulls
 bullsDone: 
-	li $t9, 0 #index
+	jr $ra
+	
 playCows:
+	move $t1, $a1 #cows	
+	li $t9, 0 #index
+loopCows:
 	beq $t9, $t1, cowsDone
 	li $v0, 33
 	li $a0, 62 #pitch
@@ -39,19 +49,7 @@ playCows:
 	li $a3, 62 #volume
 	syscall
 	addi $t9, $t9, 1
-	j playCows
+	j loopCows
 cowsDone:
-	li $t9, 0 #index
-playMisses:
-	beq $t9, $t2, missesDone
-	li $v0, 33
-	li $a0, 62 #pitch
-	li $a1, -1  #duration
-	li $a2, 8 #instrument
-	li $a3, 62 #volume
-	syscall
-	addi $t9, $t9, 1
-	j playMisses
-missesDone:
 	jr $ra
 	

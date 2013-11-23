@@ -76,6 +76,7 @@ cows1:
 
 errortext:
 	.asciiz "\nThe computer had to give up and start over!\n"
+	.align 2
 
 .text
 

@@ -1,81 +1,3 @@
-.data
-
-playerSecretNumber:
-		.space 32
-		.align 2
-computerSecretNumber:
-		.space 32
-		.align 2
-computerLastGuessResult:
-		.word 0xFF # first time, contents don't matter
-		
-humanPromptText:
-		.asciiz "Please input your secret number in hex: "
-		.align 2
-humanGUIText:
-		.asciiz "Please try and guess the secret number: "
-		.align 2
-		
-seperatorText:
-		.asciiz "\n---------------------------------------------------------\n"
-		.align 2
-		
-errorText:
-		.asciiz "An error occurred\n"
-		.align 2
-filledHexArray:
-		.asciiz "0123456789abcdef"
-		.align 2
-chosenArray:
-		.space 32
-		.align 2
-		
-computerPromptText:
-		.asciiz "Computer's guess was: "
-		.align 2
-playerInputBuffer:
-		.space 36
-		.align 2		
-invCharPrompt:
-	.asciiz "\nERROR: valid digits are 0-9 and A-F only\n"
-	.align 2
-reusedDigitPrompt:
-	.asciiz "\nERROR: all digits in the number must be unique\n"	
-	.align 2
-alreadyGuessedPrompt:
-	.asciiz "\nERROR: number has already been guessed\n"
-	.align 2		
-playerWinPrompt:
-	.asciiz "\n4 bulls -> YOU WIN!\n"		
-	.align 2
-computerWinPrompt:
-	.asciiz "\nComputer got 4 bulls -> YOU LOSE!\n"		
-	.align 2	
-numberOfBullsString:
-		.asciiz "Number of Bulls: "
-		.align 2
-numberOfCowsString:
-		.asciiz " Number of Cows: "
-		.align 2	
-turnString:
-	.asciiz "                  Turn 0x"
-	.align 2			
-
-# cheat codes
-cheatCodePrompt:
-	.asciiz "\nCheat code accepted, you rascal.\n"
-	.align 2			
-cheat_soff:
-	.ascii "soff" # not asciiz
-	.align 2			
-muteCows:	# Set to nonzero to make the cows shut UP.
-	.word 0
-cheat_look:
-	.ascii "look"
-	.align 2
-cheat_exit:
-	.ascii "exit"
-	.align 2
 .text
 
 .globl main
@@ -85,20 +7,30 @@ cheat_exit:
 	.include "hexIntConversion.asm"
 	.include "previousGuesses.asm"
 	.include "checkguess.asm"
-	.include "CpuGuess.asm"
+	.include "cpuGuess.asm"
 	.include "music.asm"
 	
 main:
-	la $a0, humanPromptText
+  introduction:
+	la $a0, introText
 	jal printText
-	#j generateComputerSecretNumber
+	la $a0, introTextBull
+	jal printText
+	li $a0, 1
+	jal playBulls
+	la $a0, introTextCow
+	jal printText
+	li $a1, 1
+	jal playCows
 	
   inputSecretNumber:
+	la $a0, humanPromptText
+	jal printText
 	li $a1, 5
 	la $a0, playerInputBuffer
 	jal readString
 	jal atoi			#get the integer value from the hex string
-	beq $v0, -1, handleInvChar		#if in put was invalid, errorOut
+	beq $v0, -1, handleInvChar		#if input was invalid, errorOut
 	sw $v0, playerSecretNumber
 	
   generateComputerSecretNumber:
@@ -146,14 +78,12 @@ humanTurnCallback:
 	lw $a0, turnNumber 
 	jal itoa
 	move $t0, $v0          #t0 has address of turn # string
-	sb $zero, 5($t0)#############################################################
+	sb $zero, 5($t0)
    removeLeadingZeros:	
 	lw $t1, ($t0)            #t1 has the turn string	
 	andi $t2, $t1, 0x00FFFFFF #three leading zeros
 	bne $t2, 0x00303030, check2leading
      handle3leading:
-        #andi $t1, $t1, 0xFF000000
-        #ori $t1, $t1, 0x00202020
         srl $t1, $t1, 24
         sw $t1, ($t0)
         j printIt	
@@ -165,7 +95,7 @@ humanTurnCallback:
         sw $t1, ($t0)
         j printIt
      check1leading:
-        andi $t2, $t1, 0x000000FF #one leading zeros
+        andi $t2, $t1, 0x000000FF #one leading zero
 	bne $t2, 0x00000030, printIt	
      handle1leading:
         srl $t1, $t1, 8
@@ -196,11 +126,11 @@ humanTurnCallback:
 	move $s0, $v0
 	#jal printNewline
 	move $a0, $s0
-   #checkGuessValidity:
+   checkGuessValidity:
 	move $t1, $a0 
 	andi $t0, $t1, 0xF000	#check for validity
 	beq $t0, 0x8000, handleReusedDigit #ERROR: number uses a digit more than once
-   #check for win
+   checkForWin:
 	andi $t0, $t1, 0x000000F0
 	beq $t0, 0x00000040, playerWin
 	la $a0, playerInputBuffer
@@ -236,7 +166,7 @@ noPlayCows:
 	jal printNewline
 	jal printNewline	
 	storeArrayHalfWord(playerPreviousResults, turnNumber, $s5)	#save the result in the array of results
-	storeArrayWord(playerPreviousGuess, turnNumber, $s6) #save the guess in the array of guesses
+	storeArrayWord(playerPreviousGuess, turnNumber, $s6)            #save the guess in the array of guesses
    exitHumanTurn:		
 	j computerTurn #jump back to the engine
 
@@ -293,7 +223,7 @@ handleAlreadyGuessed:
 errorOut:
 	jal printText
 	lw $t6, turnNumber
-	beq $t6, 0, main 
+	beq $t6, 0, inputSecretNumber 
 	j getInput		
 	
 ############ computer turn ####################	
@@ -311,14 +241,14 @@ computerTurnCallback:
 	# move 4 bytes at 0($v0) to buffer and add a /0
 	lw $t0, 0($v0)
 	sw $t0, playerInputBuffer
-	storeArrayWord(computerPreviousGuess, turnNumber, $t0) #save the guess in the array of guesses
-	sw $zero, playerInputBuffer + 4
+	storeArrayWord(computerPreviousGuess, turnNumber, $t0)           #save the guess in the array of guesses
+	sw $zero, playerInputBuffer + 4                                  #NULL terminate the string
   checkResult:
 	move $a0, $s0
 	lw $a1, playerSecretNumber
 	jal checkguess
 	storeArrayHalfWord(computerPreviousResults, turnNumber, $v0)	#save the result in the array of results
-	sw $v0, computerLastGuessResult	# save the result for sending back to the AI
+	sw $v0, computerLastGuessResult	                                # save the result for sending back to the AI
 	move $t1, $v0 
    #check for win
 	andi $t0, $t1, 0x000000F0
@@ -352,3 +282,94 @@ computerWin:
 	la $a0, computerWinPrompt
 	jal printText
 	j endGame	# terminates program	
+
+.data
+
+playerSecretNumber:
+	.space 32
+	.align 2
+computerSecretNumber:
+	.space 32
+	.align 2
+computerLastGuessResult:
+	.word 0xFF # first time, contents don't matter
+introText:
+	.ascii "             Welcome to MOOPS: Moo in MIPS\n"
+	.ascii "A code breaking game where the player tries to guess a secret\n"
+	.ascii "4 digit hexadecimal number using the cow and bull count of their\n"
+	.ascii "previous guess.  A bull is a digit which is correct and in the \n"
+	.ascii "correct position.  A cow is a digit which is correct, but is not\n"
+	.asciiz "in the correct position.\n"  
+	.align 2
+introTextBull:
+	.asciiz "The sound for a bull is:\n"
+	.align 2
+introTextCow:	
+	.asciiz "The sound for a cow is:\n"
+	.align 2
+humanPromptText:
+	.asciiz "Please input your secret number in hex: 0x"
+	.align 2
+humanGUIText:
+	.asciiz "Please try and guess the secret number: 0x"
+	.align 2
+		
+seperatorText:
+	.asciiz "\n---------------------------------------------------------\n"
+	.align 2
+
+errorText:
+	.asciiz "An error occurred\n"
+	.align 2
+filledHexArray:
+	.asciiz "0123456789abcdef"
+	.align 2
+chosenArray:
+	.space 32
+	.align 2
+computerPromptText:
+	.asciiz "Computer's guess was: 0x"
+	.align 2
+playerInputBuffer:
+	.space 36
+	.align 2		
+invCharPrompt:
+	.asciiz "\nERROR: valid digits are 0-9 and A-F only\n"
+	.align 2
+reusedDigitPrompt:
+	.asciiz "\nERROR: all digits in the number must be unique\n"	
+	.align 2
+alreadyGuessedPrompt:
+	.asciiz "\nERROR: number has already been guessed\n"
+	.align 2		
+playerWinPrompt:
+	.asciiz "\n4 bulls -> YOU WIN!\n"		
+	.align 2
+computerWinPrompt:
+	.asciiz "\nComputer got 4 bulls -> YOU LOSE!\n"		
+	.align 2	
+numberOfBullsString:
+	.asciiz "Number of Bulls: "
+	.align 2
+numberOfCowsString:
+	.asciiz " Number of Cows: "
+	.align 2	
+turnString:
+	.asciiz "                  Turn 0x"
+	.align 2			
+
+# cheat codes
+cheatCodePrompt:
+	.asciiz "\nCheat code accepted, you rascal.\n"
+	.align 2			
+cheat_soff:
+	.ascii "soff" # not asciiz
+	.align 2			
+muteCows:	# Set to nonzero to make the cows shut UP.
+	.word 0
+cheat_look:
+	.ascii "look"
+	.align 2
+cheat_exit:
+	.ascii "exit"
+	.align 2	

@@ -22,8 +22,47 @@ main:
 	jal printText
 	li $a1, 1
 	jal playCows
+  modeSelection:	
+	la $a0, modeSelectionText
+	jal printText
+	jal readInt
+	blt $v0, 1, modeError
+	bgt $v0, 3, modeError
+	beq $v0, 1, mode1
+	beq $v0, 2, mode2
+	beq $v0, 3, mode3
+    mode1:
+	jal generateComputerSecretNumber	
+	la $t0, humanTurnCallback	#store off the addresses
+	sw $t0, humanAddress
+	la $t0, doEndTurn
+	sw $t0, computerAddress
+	j exitModeSelection
+    mode2:
+	jal inputSecretNumber
+	la $t0, computerTurnCallback	#store off the addresses
+	sw $t0, humanAddress
+	la $t0, doEndTurn
+	sw $t0, computerAddress
+	j exitModeSelection
+    mode3:
+    	jal inputSecretNumber
+    	jal generateComputerSecretNumber
+	la $t0, humanTurnCallback	#store off the addresses
+	sw $t0, humanAddress
+	la $t0, computerTurnCallback
+	sw $t0, computerAddress
+	j exitModeSelection
+    exitModeSelection:
+	sw $zero, maxTurns	#infinite max turns 
+	j engineSetup		#boot up the engine    		 
+    modeError:
+	la $a0, modeErrorText
+	jal printText
+	j modeSelection	
 	
   inputSecretNumber:
+  	push($ra)
 	la $a0, humanPromptText
 	jal printText
 	li $a1, 5
@@ -37,8 +76,11 @@ main:
 	move $t1, $v0 
 	andi $t0, $t1, 0xF000	                #check for validity
 	beq $t0, 0x8000, handleReusedDigit      #ERROR: number uses a digit more than once
-
+	pop($ra)
+	jr $ra
+	
   generateComputerSecretNumber:
+  	push ($ra)
 	la $s0, computerSecretNumber	#the start of our array of already chosen vars
 	la $s1, filledHexArray
 	li $s3, 0		#$s3 will serve as our counter for how many numbers we have generated
@@ -65,26 +107,21 @@ main:
 	move $a0, $s0
 	jal atoi
 	sw $v0, computerSecretNumber
-  setupBasics:
-	la $t0, humanTurnCallback	#store off the addresses
-	sw $t0, humanAddress
-	la $t0, computerTurnCallback
-	sw $t0, computerAddress
-	sw $zero, maxTurns	#infinite max turns
-	
-	j engineSetup		#boot up the engine
+	pop($ra)
+	jr $ra
 	
 ############ human turn ####################	
 humanTurnCallback:
 	la $a0, seperatorText
 	jal printText
+   printTurnNumber:	
 	la $a0, turnString
 	jal printText
 	lw $a0, turnNumber 
 	jal itoa
 	move $t0, $v0          #t0 has address of turn # string
 	sb $zero, 5($t0)
-   removeLeadingZeros:	
+    removeLeadingZeros:	
 	lw $t1, ($t0)            #t1 has the turn string	
 	andi $t2, $t1, 0x00FFFFFF #three leading zeros
 	bne $t2, 0x00303030, check2leading
@@ -312,6 +349,18 @@ introTextBull:
 introTextCow:	
 	.asciiz "The sound for a cow is:\n"
 	.align 2
+modeSelectionText:
+	.ascii "There are numerous ways to play this game.  Please choose from one\n"
+	.ascii "of the options below:\n"
+	.ascii "[1] 1 Player only\n"
+	.ascii "[2] AI only\n"
+	.ascii "[3] Player vs The AI\n"
+	#.ascii "[4] Player vs Player"  #Possible future addition
+	.asciiz "(Numbers only): "
+	.align 2
+modeErrorText:
+	.asciiz"ERROR: invalid meny choice\n"
+	.align 2	
 humanPromptText:
 	.asciiz "Please input your secret number in hex: 0x"
 	.align 2

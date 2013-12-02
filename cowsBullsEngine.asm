@@ -14,48 +14,52 @@ main:
   introduction:
 	la $a0, introText
 	jal printText
+  introMusic:
+  	la $a0, soundIntroText
+  	jal printText
 	la $a0, introTextBull
 	jal printText
-	li $a0, 1
+	li $a0, 1			#play 1 bull
 	jal playBulls
 	la $a0, introTextCow
 	jal printText
-	li $a1, 1
+	li $a1, 1			#play 1 cow
 	jal playCows
   modeSelection:	
 	la $a0, modeSelectionText
 	jal printText
 	jal readInt
-	blt $v0, 1, modeError
+	blt $v0, 0, modeError
 	bgt $v0, 3, modeError
+	beq $v0, 0, introMusic
 	beq $v0, 1, mode1
 	beq $v0, 2, mode2
 	beq $v0, 3, mode3
-    mode1:
+    mode1:                               #1 player
 	jal generateComputerSecretNumber	
-	la $t0, humanTurnCallback	#store off the addresses
+	la $t0, humanTurnCallback	
 	sw $t0, humanAddress
 	la $t0, doEndTurn
-	sw $t0, computerAddress
+	sw $t0, computerAddress		#skip over computer turn
 	j exitModeSelection
-    mode2:
+    mode2:                               #AI only
 	jal inputSecretNumber
-	la $t0, computerTurnCallback	#store off the addresses
+	la $t0, computerTurnCallback	#skip over the human turn
 	sw $t0, humanAddress
 	la $t0, doEndTurn
 	sw $t0, computerAddress
 	j exitModeSelection
-    mode3:
+    mode3:                               #Player vs. AI
     	jal inputSecretNumber
     	jal generateComputerSecretNumber
-	la $t0, humanTurnCallback	#store off the addresses
+	la $t0, humanTurnCallback	
 	sw $t0, humanAddress
 	la $t0, computerTurnCallback
 	sw $t0, computerAddress
 	j exitModeSelection
     exitModeSelection:
-	sw $zero, maxTurns	#infinite max turns 
-	j engineSetup		#boot up the engine    		 
+	sw $zero, maxTurns		#infinite max turns 
+	j engineSetup			#boot up the engine    		 
     modeError:
 	la $a0, modeErrorText
 	jal printText
@@ -156,7 +160,8 @@ humanTurnCallback:
 	la $a0, humanGUIText
 	jal printText
 	la $a0, playerInputBuffer	#the input buffer for the
-	li $a1, 5			#max number of characters
+					#max number of characters
+	li $a1, 5			#5 characters to allow it to be null terminated later				
 	jal readString
 	lw $s6, playerInputBuffer       #save the input for later
 	jal atoi
@@ -341,8 +346,12 @@ introText:
 	.ascii "4 digit hexadecimal number using the cow and bull count of their\n"
 	.ascii "previous guess.  A bull is a digit which is correct and in the \n"
 	.ascii "correct position.  A cow is a digit which is correct, but is not\n"
-	.asciiz "in the correct position.\n"  
+	.ascii "in the correct position.\n"
 	.align 2
+soundIntroText:
+	.ascii "This program will play sounds to indicate the number of cows and\n"
+	.asciiz "bulls of a player's guess.\n"
+	.align 2  	
 introTextBull:
 	.asciiz "The sound for a bull is:\n"
 	.align 2
@@ -350,8 +359,8 @@ introTextCow:
 	.asciiz "The sound for a cow is:\n"
 	.align 2
 modeSelectionText:
-	.ascii "There are numerous ways to play this game.  Please choose from one\n"
-	.ascii "of the options below:\n"
+	.ascii "Please choose from one of the options below:\n"
+	.ascii "[0] Replay moos\n"
 	.ascii "[1] 1 Player only\n"
 	.ascii "[2] AI only\n"
 	.ascii "[3] Player vs The AI\n"

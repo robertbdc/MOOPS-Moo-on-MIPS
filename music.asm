@@ -27,9 +27,9 @@ playBulls:
 loopBulls:
 	beq $t9, $t0, bullsDone
 	li $v0, 33
-	li $a0, 62 #pitch
+	li $a0, 37 #pitch
 	li $a1, -1  #duration
-	li $a2, 24 #instrument
+	li $a2, 59 #instrument
 	li $a3, 62 #volume
 	syscall
 	addi $t9, $t9, 1
@@ -43,9 +43,9 @@ playCows:
 loopCows:
 	beq $t9, $t1, cowsDone
 	li $v0, 33
-	li $a0, 62 #pitch
+	li $a0, 53 #pitch
 	li $a1, -1  #duration
-	li $a2, 72 #instrument
+	li $a2, 58 #instrument
 	li $a3, 62 #volume
 	syscall
 	addi $t9, $t9, 1

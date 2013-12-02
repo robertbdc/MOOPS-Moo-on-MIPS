@@ -283,10 +283,11 @@ computerTurnCallback:
 	# convert integer in $a0 back to ascii for display
 	# $v0 points to ascii buffer (not null terminated)
 	add $a0, $zero, $s0
-	jal itoa 
-	
+	jal itoa
 	# move 4 bytes at 0($v0) to buffer and add a /0
 	lw $t0, 0($v0)
+	lw $t1, errorCode              #itoa returns ERR when guess is out of range
+	beq $t0, $t1, computerError    #if there is an error, computer is giving incorrect guesses, probably because it ran out of guesses
 	sw $t0, playerInputBuffer
 	storeArrayWord(computerPreviousGuess, turnNumber, $t0)           #save the guess in the array of guesses
 	sw $zero, playerInputBuffer + 4                                  #NULL terminate the string
@@ -305,7 +306,8 @@ computerTurnCallback:
 	
   printResult:
 	#la $a0, seperatorText
-	#jal printText 
+	#jal printText
+	jal printNewline 
 	la $a0, computerPromptText
 	jal printText
 	la $a0, playerInputBuffer
@@ -328,7 +330,11 @@ computerTurnCallback:
 computerWin:
 	la $a0, computerWinPrompt
 	jal printText
-	j endGame	# terminates program	
+	j endGame	# terminates program
+computerError:
+	la $a0, computerFailPrompt
+	jal printText
+	j endGame		
 
 .data
 
@@ -346,7 +352,7 @@ introText:
 	.ascii "4 digit hexadecimal number using the cow and bull count of their\n"
 	.ascii "previous guess.  A bull is a digit which is correct and in the \n"
 	.ascii "correct position.  A cow is a digit which is correct, but is not\n"
-	.ascii "in the correct position.\n"
+	.asciiz "in the correct position.\n"
 	.align 2
 soundIntroText:
 	.ascii "This program will play sounds to indicate the number of cows and\n"
@@ -410,7 +416,10 @@ playerWinPrompt:
 	.align 2
 computerWinPrompt:
 	.asciiz "\nComputer got 4 bulls -> YOU LOSE!\n"		
-	.align 2	
+	.align 2
+computerFailPrompt:
+	.asciiz "\nComputer player has encountered an error\n"		
+	.align 2		
 numberOfBullsString:
 	.asciiz "Number of Bulls: "
 	.align 2

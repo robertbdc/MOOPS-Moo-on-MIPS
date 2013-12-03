@@ -14,7 +14,7 @@ playerPrevGuessHeader:
 	.asciiz "\nPlayer's previous guesses:\n"
 	.align 2
 computerPrevGuessHeader:
-	.asciiz "\nComputer's previous guesses:\n"
+	.asciiz "\nART's previous guesses:\n"
 	.align 2							
 #store preious guesses as 4 bytes of ASCII		
 playerPreviousGuess:

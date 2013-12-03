@@ -14,28 +14,19 @@ main:
   introduction:
 	la $a0, introText
 	jal printText
-  introMusic:
-  	la $a0, soundIntroText
-  	jal printText
-	la $a0, introTextBull
-	jal printText
-	li $a0, 1			#play 1 bull
-	jal playBulls
-	la $a0, introTextCow
-	jal printText
-	li $a1, 1			#play 1 cow
-	jal playCows
+
   modeSelection:	
 	la $a0, modeSelectionText
 	jal printText
 	jal readInt
-	blt $v0, 0, modeError
+	blt $v0, 1, modeError
 	bgt $v0, 3, modeError
-	beq $v0, 0, introMusic
+	#beq $v0, 0, introMusic
 	beq $v0, 1, mode1
 	beq $v0, 2, mode2
 	beq $v0, 3, mode3
     mode1:                               #1 player
+	jal introMusic
 	jal generateComputerSecretNumber	
 	la $t0, humanTurnCallback	
 	sw $t0, humanAddress
@@ -50,6 +41,7 @@ main:
 	sw $t0, computerAddress
 	j exitModeSelection
     mode3:                               #Player vs. AI
+	jal introMusic
     	jal inputSecretNumberInitial
     	jal generateComputerSecretNumber
 	la $t0, humanTurnCallback	
@@ -64,7 +56,22 @@ main:
 	la $a0, modeErrorText
 	jal printText
 	j modeSelection	
-  		
+
+  introMusic:
+	push ($ra)
+  	la $a0, soundIntroText
+  	jal printText
+	la $a0, introTextBull
+	jal printText
+	li $a0, 1			#play 1 bull
+	jal playBulls
+	la $a0, introTextCow
+	jal printText
+	li $a1, 1			#play 1 cow
+	jal playCows
+	pop($ra)
+	jr $ra
+	
   inputSecretNumberInitial:
   	push($ra)
     inputSecretNumber:	
@@ -231,6 +238,8 @@ handleInvChar:
 	beq $s6, $t9, cheatLook
 	lw $t9, cheat_exit
 	beq $s6, $t9, cheatExit
+	lw $t9, cheat_mooo
+	beq $s6, $t9, cheatMooo
 	j justPlainInvalid
 cheatShutUp:
 	addi $t9, $zero, 0xFF
@@ -253,7 +262,10 @@ cheatExit:
 	# future: add confirmation?
 	jal printNewline
 	j endGame	# terminates program
-
+cheatMooo:
+	jal introMusic
+	la $a0, cheatMooPrompt
+	j errorOut
 cheatDone:
 	la $a0, cheatCodePrompt
 	j errorOut
@@ -360,7 +372,7 @@ introText:
 	.asciiz "in the correct position.\n"
 	.align 2
 soundIntroText:
-	.ascii "This program will play sounds to indicate the number of cows and\n"
+	.ascii "\nThis program will play sounds to indicate the number of cows and\n"
 	.asciiz "bulls of a player's guess.\n"
 	.align 2  	
 introTextBull:
@@ -371,10 +383,10 @@ introTextCow:
 	.align 2
 modeSelectionText:
 	.ascii "Please choose from one of the options below:\n"
-	.ascii "[0] Replay moos\n"
+	#.ascii "[0] Replay moos\n"
 	.ascii "[1] 1 Player only\n"
-	.ascii "[2] AI only\n"
-	.ascii "[3] Player vs The AI\n"
+	.ascii "[2] ART (Computer player) only\n"
+	.ascii "[3] Player vs ART\n"
 	#.ascii "[4] Player vs Player"  #Possible future addition
 	.asciiz "(Numbers only): "
 	.align 2
@@ -402,7 +414,7 @@ chosenArray:
 	.space 32
 	.align 2
 computerPromptText:
-	.asciiz "Computer's guess was: 0x"
+	.asciiz "ART's guess was: 0x"
 	.align 2
 playerInputBuffer:
 	.space 36
@@ -420,10 +432,10 @@ playerWinPrompt:
 	.asciiz "\n4 bulls -> YOU WIN!\n"		
 	.align 2
 computerWinPrompt:
-	.asciiz "\nComputer got 4 bulls -> YOU LOSE!\n"		
+	.asciiz "\nART got 4 bulls -> ART wins!\n"		
 	.align 2
 computerFailPrompt:
-	.asciiz "\nComputer player has encountered an error\n"		
+	.asciiz "\nART has encountered an error\n"		
 	.align 2		
 numberOfBullsString:
 	.asciiz "Number of Bulls: "
@@ -449,4 +461,10 @@ cheat_look:
 	.align 2
 cheat_exit:
 	.ascii "exit"
-	.align 2	
+	.align 2
+cheat_mooo:
+	.ascii "mooo"
+	.align 2
+cheatMooPrompt:	
+	.asciiz "MOOOOOOOOOOO\n"
+	.align 2

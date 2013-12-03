@@ -43,14 +43,14 @@ main:
 	sw $t0, computerAddress		#skip over computer turn
 	j exitModeSelection
     mode2:                               #AI only
-	jal inputSecretNumber
+	jal inputSecretNumberInitial
 	la $t0, computerTurnCallback	#skip over the human turn
 	sw $t0, humanAddress
 	la $t0, doEndTurn
 	sw $t0, computerAddress
 	j exitModeSelection
     mode3:                               #Player vs. AI
-    	jal inputSecretNumber
+    	jal inputSecretNumberInitial
     	jal generateComputerSecretNumber
 	la $t0, humanTurnCallback	
 	sw $t0, humanAddress
@@ -64,9 +64,10 @@ main:
 	la $a0, modeErrorText
 	jal printText
 	j modeSelection	
-	
-  inputSecretNumber:
+  		
+  inputSecretNumberInitial:
   	push($ra)
+    inputSecretNumber:	
 	la $a0, humanPromptText
 	jal printText
 	li $a1, 5
@@ -205,9 +206,8 @@ humanTurnCallback:
 	move $a1, $a0
 	move $a0, $t0
 	jal playCowsAndBulls
-noPlayCows:
-	
-	jal printNewline
+   noPlayCows:
+	#jal printNewline
 	jal printNewline	
 	storeArrayHalfWord(playerPreviousResults, turnNumber, $s5)	#save the result in the array of results
 	la $a0, playerInputBuffer
@@ -328,6 +328,11 @@ computerTurnCallback:
 	j doEndTurn
 	
 computerWin:
+	jal printNewline 
+	la $a0, computerPromptText
+	jal printText
+	la $a0, playerInputBuffer
+	jal printText
 	la $a0, computerWinPrompt
 	jal printText
 	j endGame	# terminates program

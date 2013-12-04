@@ -74,6 +74,8 @@ pen: .word 0 # the guess that has 2 (or 3) cows
 pencount: .word 0 # the number of Bovines in the Pen
 field: .word 0 # the guess that has 1 (or 2) cows
 fieldcount: .word 0 # the number of Bovines in the Field
+pasture: .word 0 # another guess with 1 cow
+pasturecount: .word 0 # the number of Bovines in the Pasture
 # Save what they used to be so we can swap them back
 penSwapOut: .word 0
 fldSwapOut: .word 0
@@ -134,9 +136,11 @@ kibPh2Dec:
 	.asciiz "ART: I lost a Bovine by swapping digits. The old one was a Bovine, the new one is a Goat.\nI'm going to swap them back.\n"
 	.align 2
 kibPh2Equ:
-	.asciiz "ART: No change by swapping digits. They're both the same type, so it's complicated.\n"
+	.asciiz "ART: No change by swapping digits. They're both the same type, so it's complicated.\nI have to swap a different digit from the pasture.\n"
 	.align 2
-
+kibPh2oops:
+	.asciiz "ART: I ran out of digits to swap! (Probably because I didn't rotate pastures.)\n"
+	.align 2
 kibPh3Wow:
 	.asciiz "ART: Hot dog, I've got four cows! But I don't know what to do with them.\n"
 	.align 2
@@ -230,6 +234,8 @@ firstguess:
 	sw	$zero, field
 	sw	$zero, pencount
 	sw	$zero, fieldcount
+	sw	$zero, pasture
+	sw	$zero, pasturecount
 	
 	j	phase1play
 
@@ -279,10 +285,7 @@ ph1chkpenfield:
 	la $a0, kibPh2Start ### kibPh2Start
 	jal printText
 
-	sw	$zero, mode	# mode 0
-	addi	$t9, $zero, 2
-	sw	$t9, phase # phase 2
-	j	phase2check
+	j	phase2setup
 	
 phase1play:
 	# we want to end up with our next guess in $s0
@@ -338,11 +341,8 @@ phase2check:
 	# not used yet: $t2 = bovines known in pen, $t3 = in field
 
 	# set $t4 = pen guess, $t5 = field guess
-	lw	$t4, pen	# t4 = pen
-	lw	$t5, field	# t5 = field
-	
-	lw	$s2, mode
-	beq	$s2, $zero, ph2setup	# Initial setup
+	lw	$t4, pen
+	lw	$t5, field
 	
 	# Get count from the previous guess
 	# set $t0 = (prev) pen count, $t1 = (prev) field count
@@ -354,7 +354,18 @@ phase2check:
 	# Did it go up or down, or stay the same?
 	blt	$t0, $s4, ph2inc
 	bgt	$t0, $s4, ph2dec
-	j	ph2equ
+
+ph2equ:
+	# No change: they're both the same.
+	# Keep them where they are, and compare a different Goat
+	la $a0, kibPh2Equ ### kibPh2Equ
+	jal printText
+
+	# Increase current Field Swap mode
+	lw	$t9, mode
+	addi	$t9, $t9, 1
+	sw	$t9, mode
+	j	ph2swap
 
 ph2inc:
 	# Increase: we swapped a Goat (penSwapOut) for a Bovine (fldSwapOut)
@@ -364,6 +375,9 @@ ph2inc:
 	
 	# Note: don't store current count back unless it goes up
 	sw	$s4, pencount	# store back for next time
+
+	# We will go back to looking at the first unknown Field digit
+	sw	$zero, mode
 
 	# Mark the Bovine that came from the field
 	lw	$t2, fldSwapOut
@@ -386,6 +400,9 @@ ph2dec:
 	la $a0, kibPh2Dec ### kibPh2Dec
 	jal printText
 	
+	# We will go back to looking at the first unknown Field digit
+	sw	$zero, mode
+
 	# Move the Bovine back to the Pen
 	lw	$t2, penSwapOut
 	lw	$t9, penCurUnk
@@ -409,17 +426,16 @@ ph2dec:
 	# Now the Pen and the Field have digits which are marked -1, 0, 1
 	j	ph2swap
 
-ph2equ:
-	la $a0, kibPh2Equ ### kibPh2Equ
-	jal printText
-
-	j	error
-
-ph2setup:
+phase2setup:
 	# initial pencount and fieldcount were set in Phase 1
-	addi	$t9, $zero, 1
-	sw	$t9, mode # go to Mode 1 after initial setup
-	
+	addi	$t9, $zero, 2
+	sw	$t9, phase # phase 2
+	sw	$zero, mode # Mode 0, look at first unknown Field digit
+
+	# set $t4 = pen guess, $t5 = field guess
+	lw	$t4, pen
+	lw	$t5, field
+
 	# Pen digits: penA, penB, penC, penD
 	# Each one is Bovine 1, Goat -1, or Unknown 0
 	andi	$t8, $t4, 0x000F
@@ -468,25 +484,36 @@ ph2swap:
 	la $a0, kibPh2Swap ### kibPh2Swap
 	jal printText
 
+	# Get current Field Swap mode (0-3)
+	lw	$t4, mode
+	bgt	$t4, 3, fldoops
+
 	# $t7 = point to unknown in pen, $t8 = point to field
 	# $t5 = pen digit, $t6 = field digit
 
-	# Find the first unknown in the Pen (t7 pointer, t5 digit)
+	# Find the first unknown (always the first) in the Pen (t7 pointer, t5 digit)
+penAck:
 	la	$t7, penA
 	lw	$t5, ($t7)
 	sll	$t9, $t5, 2		# get a word
 	lw	$t9, ph2Poss($t9)	# current status for this char, init to 0
 	beq	$t9, $zero, gotPenUnk # 0 if unknown
+
+penBck:
 	la	$t7, penB
 	lw	$t5, ($t7)
 	sll	$t9, $t5, 2		# get a word
 	lw	$t9, ph2Poss($t9)	# current status for this char, init to 0
 	beq	$t9, $zero, gotPenUnk # 0 if unknown
+
+penCck:
 	la	$t7, penC
 	lw	$t5, ($t7)
 	sll	$t9, $t5, 2		# get a word
 	lw	$t9, ph2Poss($t9)	# current status for this char, init to 0
 	beq	$t9, $zero, gotPenUnk # 0 if unknown
+
+penDck:
 	la	$t7, penD
 	lw	$t5, ($t7)
 	sll	$t9, $t5, 2		# get a word
@@ -496,28 +523,48 @@ ph2swap:
 	j	error
 	
 gotPenUnk:
-	# Find the first unknown in the Field (t8 pointer, t6 digit)
+	# Find the desired unknown (0 to 3 in $t4) in the Field (t8 pointer, t6 digit)
+fldAck:
 	la	$t8, fldA
 	lw	$t6, ($t8)
 	sll	$t9, $t6, 2		# get a word
 	lw	$t9, ph2Poss($t9)	# current status for this char, init to 0
-	beq	$t9, $zero, gotFldUnk # 0 if unknown
+	bne	$t9, $zero, fldBck # If known, check next
+	beq	$t4, $zero, gotFldUnk # Is this the unknown we want?
+	addi	$t4, $t4, -1	# no, try again
+
+fldBck:
 	la	$t8, fldB
 	lw	$t6, ($t8)
 	sll	$t9, $t6, 2		# get a word
 	lw	$t9, ph2Poss($t9)	# current status for this char, init to 0
-	beq	$t9, $zero, gotFldUnk # 0 if unknown
+	bne	$t9, $zero, fldCck # If known, check next
+	beq	$t4, $zero, gotFldUnk # Is this the unknown we want?
+	addi	$t4, $t4, -1	# no, try again
+
+fldCck:
 	la	$t8, fldC
 	lw	$t6, ($t8)
 	sll	$t9, $t6, 2		# get a word
 	lw	$t9, ph2Poss($t9)	# current status for this char, init to 0
-	beq	$t9, $zero, gotFldUnk # 0 if unknown
+	bne	$t9, $zero, fldDck # If known, check next
+	beq	$t4, $zero, gotFldUnk # Is this the unknown we want?
+	addi	$t4, $t4, -1	# no, try again
+
+fldDck:
 	la	$t8, fldD
 	lw	$t6, ($t8)
 	sll	$t9, $t6, 2		# get a word
 	lw	$t9, ph2Poss($t9)	# current status for this char, init to 0
-	beq	$t9, $zero, gotFldUnk # 0 if unknown
+	bne	$t9, $zero, fldoops # If known, check next
+	beq	$t4, $zero, gotFldUnk # Is this the unknown we want?
+	addi	$t4, $t4, -1	# no, try again
+
+fldoops:
 	# all are known, what?
+	la $a0, kibPh2oops ### kibPh2oops
+	jal printText
+
 	j	error
 	
 gotFldUnk:

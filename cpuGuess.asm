@@ -16,16 +16,6 @@
 #		$s2 = current mode or pointer (within phase)
 #		$s3 = previous guess
 #		$s4 = bovine count (bulls + cows)
-# Commonly used temps (for reference when debugging):
-#		$t0 = 
-#		$t1 = 
-#		$t2 = 
-#		$t3 = 
-#		$t4 = 
-#		$t5 = 
-#		$t7 = rotating previous guess
-#		$t8 = bulls (for Phase 4)
-#		$t9 = scratch
 
 .data
 .align 2
@@ -39,8 +29,6 @@ curguess:
 	.word 0 # Last submitted guess
 result:
 	.word 0 # Result of last submitted guess
-ph1Poss:
-	.word 0:16 # 16 words initialized to 0 (possible)
 
 ## Phase 1 storage
 # 16 initial guesses (store by byte so we don't have to have nybble-size pointer)
@@ -68,14 +56,18 @@ outofguesses:
 	.word -1	# Just want this label to check for "out of options"
 digitoffset:
 	.word 0 # points to current digit. 0xXY: X = set, Y = digit
+ph1Poss:
+	.word 0:16 # 16 words initialized to 0 (possible)
 
-## Phase 2 storage
+## Set by Phase 1 for use in Phase 2
 pen: .word 0 # the guess that has 2 (or 3) cows
 pencount: .word 0 # the number of Bovines in the Pen
 field: .word 0 # the guess that has 1 (or 2) cows
 fieldcount: .word 0 # the number of Bovines in the Field
 pasture: .word 0 # another guess with 1 cow
 pasturecount: .word 0 # the number of Bovines in the Pasture
+
+## Phase 2 storage
 # Save what they used to be so we can swap them back
 penSwapOut: .word 0
 fldSwapOut: .word 0
@@ -112,35 +104,43 @@ kibPhase1:
 	.asciiz "ART: I'm picking from a preset list, after eliminating known Goats.\n"
 	.align 2
 kibPh1Set:
-	.asciiz "ART: Starting another set of up to 4 preset guesses.\n"
+	.asciiz "ART: Starting another set of up to 4 preset guesses. Pen, Field, and Pasture emptied.\n"
 	.align 2
 kibPh1Goats:
 	.asciiz "ART: That was all Goats? Well, that's good to know.\n"
 	.align 2
 kibPh1Pen:
-	.asciiz "ART: Looks like I've got a guess with 2 or 3 Bovines.\n"
+	.asciiz "ART: Looks like I've got a guess with 2 or 3 Bovines. That goes in the Pen.\n"
 	.align 2
 kibPh1Fld:
-	.asciiz "ART: Now I have a guess with 1 or 2 Bovines.\n"
+	.asciiz "ART: Now I have a guess with 1 or 2 Bovines. That goes in the Field.\n"
 	.align 2
+kibPh1Pas:
+	.asciiz "ART: One more guess has 1 Bovine. That goes in the Pasture.\n"
+	.align 2
+
 kibPh2Start:
-	.asciiz "ART: I have 3 or 4 Bovines split between two guesses. I'm on a roll now!\n"
+	.asciiz "ART: I have 4 Bovines split between the Pen and Field (and maybe Pasture). I'm on a roll now!\n"
 	.align 2
 kibPh2Swap:
-	.asciiz "ART: I'm swapping digits between two Guesses. Will it be better... or worse?\n"
+	.asciiz "ART: I'm swapping digits between the Pen and the Field. Will it be better... or worse?\n"
 	.align 2
 kibPh2Inc:
 	.asciiz "ART: I got more Bovines by swapping digits! The old one was a Goat, the new one is a Bovine.\nI'm going to keep them where they are.\n"
+	.align 2
+kibPh2Pasture:
+	.asciiz "ART: That used up the Bovine in the Field, so I'm going to look in the Pasture now.\n"
 	.align 2
 kibPh2Dec:
 	.asciiz "ART: I lost a Bovine by swapping digits. The old one was a Bovine, the new one is a Goat.\nI'm going to swap them back.\n"
 	.align 2
 kibPh2Equ:
-	.asciiz "ART: No change by swapping digits. They're both the same type, so it's complicated.\nI have to swap a different digit from the pasture.\n"
+	.asciiz "ART: No change by swapping digits. They're both the same type, so I have to swap a different digit from the Field.\n"
 	.align 2
 kibPh2oops:
 	.asciiz "ART: I ran out of digits to swap! (Probably because I didn't rotate pastures.)\n"
 	.align 2
+
 kibPh3Wow:
 	.asciiz "ART: Hot dog, I've got four cows! But I don't know what to do with them.\n"
 	.align 2
@@ -170,11 +170,11 @@ cpuguess:
 	andi	$t9, $a0, 0x000F	# cows (in $t9 for temp use below)
 	add	$s4, $t9, $t8		# total cattle count in $s4
 	
-	la $a0, kibMyTurn ### kibMyTurn
+	la $a0, kibMyTurn
 	jal printText
 
 	# If we have 4 cows, we don't need to add to counters.
-	beq	$t9, 4, phase3check	# Have 4 cows!
+	beq	$s4, 4, phase3check	# Have 4 cows!
 	
 	# Add to digit counters
 	# Add bovine count to all the digits in last guess ($s3)
@@ -195,7 +195,7 @@ hasbovines:
 
 allgoats:
 	# Bad news, this set of digits is all goats
-	la $a0, kibPh1Goats ### kibPh1Goats
+	la $a0, kibPh1Goats
 	jal printText
 
 	addi	$t4, $zero, -1
@@ -221,7 +221,7 @@ digitloopdone:
 firstguess:
 	# initialize (note we end up here on error, too)
 
-	la $a0, kibLetsGo ### kibLetsGo
+	la $a0, kibLetsGo
 	jal printText
 	
 	addi	$t9, $zero, 1
@@ -242,11 +242,11 @@ firstguess:
 phase1check:
 	# Last guess has 0-3 bovines
 	# If it has 0, no effect
-	# If it has 1, save it in field and see if we have 2+1
-	# If it has 2 or 3, save it in pen and see if we have 2+1
+	# If it has 1, save it in field or pasture and see if we have 4 total
+	# If it has 2 or 3, save it in pen and see if we have 4 total
 	beq	$s4, 3, ph1savepen
 	beq	$s4, 2, ph1saveck # could be the Pen or the Field
-	beq	$s4, 1, ph1savefield
+	beq	$s4, 1, ph1savefield # could be the Field or the Pasture
 	j	phase1play	# 0, no effect
 ph1saveck:
 	# If I have a Pen, this is the Field
@@ -257,34 +257,43 @@ ph1saveck:
 	# fall through to ph1savepen
 	
 ph1savepen:
-	la $a0, kibPh1Pen ### kibPh1Pen
+	la $a0, kibPh1Pen
 	jal printText
 
 	sw	$s3, pen
 	sw	$s4, pencount
-	add	$t4, $zero, $s3	# t4 = pen
-	lw	$t5, field	# t5 = field
 	j	ph1chkpenfield
 ph1savefield:
-	la $a0, kibPh1Fld ### kibPh1Fld
+	# If I have a Field, this is the Pasture
+	lw	$t4, field
+	bne	$t4, $zero, ph1savepasture
+	
+	la $a0, kibPh1Fld
 	jal printText
 
 	sw	$s3, field
 	sw	$s4, fieldcount
-	add	$t5, $zero, $s3	# t5 = field
-	lw	$t4, pen	# t4 = pen
-	# fall through to ph1chkpenfield
-ph1chkpenfield:
-	lw	$t9, pencount
-	lw	$t8, fieldcount
-	blt	$t9, 2, phase1play # not 2+ in the pen?
-	blt	$t8, 1, phase1play # not 1+ in the field?
-	# Remember, we might not be able to get 4 total (ex: A68E)
-
-	# We have a pen and a field! Go to Phase 2!
-	la $a0, kibPh2Start ### kibPh2Start
+	j	ph1chkpenfield
+ph1savepasture:
+	la $a0, kibPh1Pas
 	jal printText
 
+	sw	$s3, pasture
+	sw	$s4, pasturecount
+	# fall through to ph1chkpenfield
+
+ph1chkpenfield:
+	# Do we have 4 total between Pen, Field, and Pasture?
+	# (Won't happen for a 1/1/1/1 like 159D)
+	# Remember, we can't always get 4 total in just Pen and Field (ex: A68E)
+	lw	$t9, pencount
+	lw	$t8, fieldcount
+	lw	$t7, pasturecount
+	add	$t9, $t9, $t8
+	add	$t9, $t9, $t7
+	blt	$t9, 4, phase1play
+
+	# We have a pen and a field! Go to Phase 2!
 	j	phase2setup
 	
 phase1play:
@@ -294,13 +303,13 @@ phase1play:
 	addi	$t8, $zero, 0xFF	# catch out of bounds error
 
 	# Get our next digit
-	lw	$s2, digitoffset # get the next digit in the list #### BREAKPOINT -----
+	lw	$s2, digitoffset # get the next digit in the list
 	# If the last digit of the offset is 0, we just started a new set
 	andi	$t9, $s2, 0x000F
 	bne	$t9, $zero, getchar # If we didn't just start a new set, continue
 
 	# We didn't have 3+1 in the last set, so reset the pen and field
-	la $a0, kibPh1Set ### kibPh1Set
+	la $a0, kibPh1Set
 	jal printText
 	sw	$zero, pen
 	sw	$zero, field
@@ -324,7 +333,7 @@ getchar:
 	j	getchar
 	
 phase1done:
-	la $a0, kibPhase1 ### kibPhase1
+	la $a0, kibPhase1
 	jal printText
 
 	# Save position of next digit
@@ -346,11 +355,10 @@ phase2check:
 	
 	# Get count from the previous guess
 	# set $t0 = (prev) pen count, $t1 = (prev) field count
+	# We updated Pen/Field count if we swapped (Pen++, Field--)
 	lw	$t0, pencount
-	lw	$t1, fieldcount
-	# Note: don't store current count back unless it goes up
 	
-	# Compare with the last guess
+	# Compare Pen count with the last guess
 	# Did it go up or down, or stay the same?
 	blt	$t0, $s4, ph2inc
 	bgt	$t0, $s4, ph2dec
@@ -358,7 +366,7 @@ phase2check:
 ph2equ:
 	# No change: they're both the same.
 	# Keep them where they are, and compare a different Goat
-	la $a0, kibPh2Equ ### kibPh2Equ
+	la $a0, kibPh2Equ
 	jal printText
 
 	# Increase current Field Swap mode
@@ -370,12 +378,9 @@ ph2equ:
 ph2inc:
 	# Increase: we swapped a Goat (penSwapOut) for a Bovine (fldSwapOut)
 	# The Pen and the Field are just like we want them. Just mark digits as known.
-	la $a0, kibPh2Inc ### kibPh2Inc
+	la $a0, kibPh2Inc
 	jal printText
 	
-	# Note: don't store current count back unless it goes up
-	sw	$s4, pencount	# store back for next time
-
 	# We will go back to looking at the first unknown Field digit
 	sw	$zero, mode
 
@@ -385,6 +390,32 @@ ph2inc:
 	sll	$t9, $t2, 2 # word
 	sw	$t3, ph2Poss($t9)	# store result
 	
+	# The Pen went up and Field went down
+	sw	$s4, pencount	# store back for next time
+
+	# There's one less Bovine in the Field. If the Field is all Goats, rotate Pastures!
+	lw	$t1, fieldcount
+	addi	$t1, $t1, -1
+
+	# If the Field has 0, it will be replaced with the Pasture, which has 1
+	# So the Field is always going to be 1 now.
+	addi	$t9, $zero, 1
+	sw	$t9, fieldcount
+	
+	bne	$t1, $zero, ph2incgo # If we started with 2 in the Field, we still have 1 left
+
+	# We've taken the only Bovine out of the Field. Rotate the Pasture into the Field!
+	la $a0, kibPh2Pasture
+	jal printText
+
+	# Just move the Pasture guess to the Field
+	lw	$t9, pasture
+	sw	$t9, field
+	addi	$t1, $zero, 1 # There will never be >1 Bovine in the Pasture
+	# Have to reset the fldX (penX is just fine)
+	j	ph2resetfield
+
+ph2incgo:
 	# Mark the Goat that went to the field
 	lw	$t2, penSwapOut
 	addi	$t3, $zero, -1
@@ -397,7 +428,7 @@ ph2inc:
 ph2dec:
 	# Decrease: we swapped a Bovine (penSwapOut) for a Goat (fldSwapOut)
 	# We messed up the Pen and the Field. Put them back like they were!
-	la $a0, kibPh2Dec ### kibPh2Dec
+	la $a0, kibPh2Dec
 	jal printText
 	
 	# We will go back to looking at the first unknown Field digit
@@ -427,15 +458,20 @@ ph2dec:
 	j	ph2swap
 
 phase2setup:
-	# initial pencount and fieldcount were set in Phase 1
+	# initial pencount, fieldcount, pasturecount were set in Phase 1
+	la $a0, kibPh2Start
+	jal printText
+
 	addi	$t9, $zero, 2
 	sw	$t9, phase # phase 2
 	sw	$zero, mode # Mode 0, look at first unknown Field digit
 
-	# set $t4 = pen guess, $t5 = field guess
+	# set $t4 = pen guess
 	lw	$t4, pen
-	lw	$t5, field
 
+	# Need to remember the original Field count. Could be 1 or 2
+	# When we have swapped that many out of the Field, we need to move to the Pasture
+	
 	# Pen digits: penA, penB, penC, penD
 	# Each one is Bovine 1, Goat -1, or Unknown 0
 	andi	$t8, $t4, 0x000F
@@ -457,6 +493,10 @@ phase2setup:
 	la	$t9, penA
 	sw	$t8, 0($t9)
 	
+ph2resetfield:
+	# set $t5 = field guess
+	lw	$t5, field
+
 	# Field digits: fldA, fldB, fldC, fldD
 	# Each one is also Bovine 1, Goat -1, or Unknown 0
 	andi	$t8, $t5, 0x000F
@@ -481,7 +521,7 @@ phase2setup:
 	# fall through to swap
 
 ph2swap:
-	la $a0, kibPh2Swap ### kibPh2Swap
+	la $a0, kibPh2Swap
 	jal printText
 
 	# Get current Field Swap mode (0-3)
@@ -562,7 +602,7 @@ fldDck:
 
 fldoops:
 	# all are known, what?
-	la $a0, kibPh2oops ### kibPh2oops
+	la $a0, kibPh2oops
 	jal printText
 
 	j	error
@@ -604,7 +644,8 @@ ph2guess:
 	j guessmade
 
 phase3check:
-	la $a0, kibPh3Wow ### kibPh3Wow
+	# Endgame: we have four Bovines, now we just need to line them up!
+	la $a0, kibPh3Wow
 	jal printText
 
 	j error

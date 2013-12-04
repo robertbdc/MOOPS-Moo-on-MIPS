@@ -39,7 +39,7 @@ curguess:
 	.word 0 # Last submitted guess
 result:
 	.word 0 # Result of last submitted guess
-possibles:
+ph1Poss:
 	.word 0:16 # 16 words initialized to 0 (possible)
 
 ## Phase 1 storage
@@ -65,7 +65,7 @@ set3:
 	.byte 4,1,0xE,0xB
 	.byte 8,5,2,0xF
 outofguesses:
-	.word 0xFFFFFFFF	# Just want this label to check for "out of options"
+	.word -1	# Just want this label to check for "out of options"
 digitoffset:
 	.word 0 # points to current digit. 0xXY: X = set, Y = digit
 
@@ -77,36 +77,24 @@ fieldcount: .word 0 # the number of Bovines in the Field
 # Save what they used to be so we can swap them back
 penSwapOut: .word 0
 fldSwapOut: .word 0
+# Save where they used to be so we can swap them back
+penCurUnk: .word 0
+fldCurUnk: .word 0
+# Quick digit ref: 0 = unk, 1 = Bovine, -1 = Goat
+ph2Poss:
+	.word 0:16 # 16 words initialized to 0 (unknown)
 
 # Pen digits: penA, penB, penC, penD
 penA: .word 0
 penB: .word 0
 penC: .word 0
 penD: .word 0
-# Unknown digit pointers: penUnk1, penUnk2, penUnk3, penUnk4
-penUnk1: .word 0
-penUnk2: .word 0
-penUnk3: .word 0
-penUnk4: .word 0
-# Known digit pointers: penK1, penK2, penK3 (no need for 4)
-penK1: .word 0
-penK2: .word 0
-penK3: .word 0
 
 # Field digits: fldA, fldB, fldC, fldD
 fldA: .word 0
 fldB: .word 0
 fldC: .word 0
 fldD: .word 0
-# Unknown digit pointers: fldUnk1, fldUnk2, fldUnk3, fldUnk4
-fldUnk1: .word 0
-fldUnk2: .word 0
-fldUnk3: .word 0
-fldUnk4: .word 0
-# Known digit pointers: fldK1, fldK2 (no need for 3/4)
-fldK1: .word 0
-fldK2: .word 0
-
 
 ## Output messages from the computer. Partly for debugging, partly for entertainment.
 errortext:
@@ -140,10 +128,10 @@ kibPh2Swap:
 	.asciiz "ART: I'm swapping digits between two Guesses. Will it be better... or worse?\n"
 	.align 2
 kibPh2Inc:
-	.asciiz "ART: I got more Bovines by swapping digits! The old one was a Goat, the new one is a Bovine.\n"
+	.asciiz "ART: I got more Bovines by swapping digits! The old one was a Goat, the new one is a Bovine.\nI'm going to keep them where they are.\n"
 	.align 2
 kibPh2Dec:
-	.asciiz "ART: I lost a Bovine by swapping digits. The old one was a Bovine, the new one is a Goat.\n"
+	.asciiz "ART: I lost a Bovine by swapping digits. The old one was a Bovine, the new one is a Goat.\nI'm going to swap them back.\n"
 	.align 2
 kibPh2Equ:
 	.asciiz "ART: No change by swapping digits. They're both the same type, so it's complicated.\n"
@@ -193,9 +181,9 @@ cpuguess:
 hasbovines:
 	andi	$t3, $t7, 0x000F	# digit of last guess
 	sll	$t3, $t3, 2		# get a word
-	lw	$t4, possibles($t3)	# current count for this char, init to 0
+	lw	$t4, ph1Poss($t3)	# current count for this char, init to 0
 	add	$t4, $t4, $s4		# add to count
-	sw	$t4, possibles($t3)	# store result
+	sw	$t4, ph1Poss($t3)	# store result
 	beq	$t9, 3, digitloopdone
 	srl	$t7, $t7, 4		# get next digit
 	addi	$t9, $t9, 1
@@ -210,7 +198,7 @@ allgoats:
 allgoatslp:
 	andi	$t3, $t7, 0x000F	# digit of last guess
 	sll	$t3, $t3, 2		# get a word
-	sw	$t4, possibles($t3)	# store result
+	sw	$t4, ph1Poss($t3)	# store result
 	beq	$t9, 3, digitloopdone
 	srl	$t7, $t7, 4		# get next digit
 	addi	$t9, $t9, 1
@@ -323,7 +311,7 @@ getchar:
 	addi	$s2, $s2, 1	# bump pointer to next digit
 	beq	$t1, $t8, error	# oops, we ran out of guesses!
 	sll	$t5, $t1, 2		# turn the character into a word
-	lw	$t4, possibles($t5)	# current count for this char
+	lw	$t4, ph1Poss($t5)	# current count for this char
 	blt	$t4, $zero, getchar	# if this digit is a goat (poss=-1), get another one
 	# if we're here, we have a good digit in $t1
 	sll	$s0, $s0, 4	# make a spot
@@ -347,7 +335,7 @@ phase2check:
 	# What's in the pen and in the field?
 	# $s4 has been set to bovine count of current guess
 	
-	# may use $t2 = bovines known in pen, $t3 = in field
+	# not used yet: $t2 = bovines known in pen, $t3 = in field
 
 	# set $t4 = pen guess, $t5 = field guess
 	lw	$t4, pen	# t4 = pen
@@ -360,7 +348,7 @@ phase2check:
 	# set $t0 = (prev) pen count, $t1 = (prev) field count
 	lw	$t0, pencount
 	lw	$t1, fieldcount
-	sw	$s4, pencount	# store back for next time
+	# Note: don't store current count back unless it goes up
 	
 	# Compare with the last guess
 	# Did it go up or down, or stay the same?
@@ -369,16 +357,57 @@ phase2check:
 	j	ph2equ
 
 ph2inc:
+	# Increase: we swapped a Goat (penSwapOut) for a Bovine (fldSwapOut)
+	# The Pen and the Field are just like we want them. Just mark digits as known.
 	la $a0, kibPh2Inc ### kibPh2Inc
 	jal printText
+	
+	# Note: don't store current count back unless it goes up
+	sw	$s4, pencount	# store back for next time
 
-	j	error
+	# Mark the Bovine that came from the field
+	lw	$t2, fldSwapOut
+	addi	$t3, $zero, 1
+	sll	$t9, $t2, 2 # word
+	sw	$t3, ph2Poss($t9)	# store result
+	
+	# Mark the Goat that went to the field
+	lw	$t2, penSwapOut
+	addi	$t3, $zero, -1
+	sll	$t9, $t2, 2 # word
+	sw	$t3, ph2Poss($t9)	# store result
+	
+	# Now the Pen and the Field have digits which are marked -1, 0, 1
+	j	ph2swap
 
 ph2dec:
+	# Decrease: we swapped a Bovine (penSwapOut) for a Goat (fldSwapOut)
+	# We messed up the Pen and the Field. Put them back like they were!
 	la $a0, kibPh2Dec ### kibPh2Dec
 	jal printText
+	
+	# Move the Bovine back to the Pen
+	lw	$t2, penSwapOut
+	lw	$t9, penCurUnk
+	sw	$t2, 0($t9)
 
-	j	error
+	# Mark the Bovine
+	addi	$t3, $zero, 1
+	sll	$t9, $t2, 2 # word
+	sw	$t3, ph2Poss($t9)	# store result
+
+	# Move the Goat back to the Field
+	lw	$t2, fldSwapOut
+	lw	$t9, fldCurUnk
+	sw	$t2, 0($t9)
+
+	# Mark the Goat
+	addi	$t3, $zero, -1
+	sll	$t9, $t2, 2 # word
+	sw	$t3, ph2Poss($t9)	# store result
+	
+	# Now the Pen and the Field have digits which are marked -1, 0, 1
+	j	ph2swap
 
 ph2equ:
 	la $a0, kibPh2Equ ### kibPh2Equ
@@ -393,85 +422,116 @@ ph2setup:
 	
 	# Pen digits: penA, penB, penC, penD
 	# Each one is Bovine 1, Goat -1, or Unknown 0
-	# Unknown digit pointers: penUnk1, penUnk2, penUnk3, penUnk4
-	# Known digit pointers: penK1, penK2, penK3 (no need for 4)
 	andi	$t8, $t4, 0x000F
 	la	$t9, penD
 	sw	$t8, 0($t9) # penA digit
-	sw	$t9, penUnk4 # first unknown is penA
 	
 	andi	$t8, $t4, 0x00F0
 	srl	$t8, $t8, 4
 	la	$t9, penC
 	sw	$t8, 0($t9)
-	sw	$t9, penUnk3
 	
 	andi	$t8, $t4, 0x0F00
 	srl	$t8, $t8, 8
 	la	$t9, penB
 	sw	$t8, 0($t9)
-	sw	$t9, penUnk2
 	
 	andi	$t8, $t4, 0xF000
 	srl	$t8, $t8, 12
 	la	$t9, penA
 	sw	$t8, 0($t9)
-	sw	$t9, penUnk1
-	
-	# null pointers for known digits
-	sw	$zero, penK1
-	sw	$zero, penK2
-	sw	$zero, penK3
 	
 	# Field digits: fldA, fldB, fldC, fldD
 	# Each one is also Bovine 1, Goat -1, or Unknown 0
-	# Unknown digit pointers: fldUnk1, fldUnk2, fldUnk3, fldUnk4
-	# Known digit pointers: fldK1, fldK2 (no need for 3/4)
 	andi	$t8, $t5, 0x000F
 	la	$t9, fldD
 	sw	$t8, 0($t9) # fldA digit
-	sw	$t9, fldUnk4 # first unknown is fldA
 	
 	andi	$t8, $t5, 0x00F0
 	srl	$t8, $t8, 4
 	la	$t9, fldC
 	sw	$t8, 0($t9)
-	sw	$t9, fldUnk3
 	
 	andi	$t8, $t5, 0x0F00
 	srl	$t8, $t8, 8
 	la	$t9, fldB
 	sw	$t8, 0($t9)
-	sw	$t9, fldUnk2
 	
 	andi	$t8, $t5, 0xF000
 	srl	$t8, $t8, 12
 	la	$t9, fldA
 	sw	$t8, 0($t9)
-	sw	$t9, fldUnk1
-	
-	# null pointers for known digits
-	sw	$zero, fldK1
-	sw	$zero, fldK2
+
 	# fall through to swap
 
 ph2swap:
 	la $a0, kibPh2Swap ### kibPh2Swap
 	jal printText
 
-	# Multiple unknowns in both pen and field
-	# Swap a digit from the Field into the Pen
-	
 	# $t7 = point to unknown in pen, $t8 = point to field
-	lw	$t7, penUnk1 # pointer to pen digit
-	lw	$t8, fldUnk1 # pointer to field digit
 	# $t5 = pen digit, $t6 = field digit
-	lw	$t5, ($t7) # value from pen digit
-	lw	$t6, ($t8) # value from field digit
 
+	# Find the first unknown in the Pen (t7 pointer, t5 digit)
+	la	$t7, penA
+	lw	$t5, ($t7)
+	sll	$t9, $t5, 2		# get a word
+	lw	$t9, ph2Poss($t9)	# current status for this char, init to 0
+	beq	$t9, $zero, gotPenUnk # 0 if unknown
+	la	$t7, penB
+	lw	$t5, ($t7)
+	sll	$t9, $t5, 2		# get a word
+	lw	$t9, ph2Poss($t9)	# current status for this char, init to 0
+	beq	$t9, $zero, gotPenUnk # 0 if unknown
+	la	$t7, penC
+	lw	$t5, ($t7)
+	sll	$t9, $t5, 2		# get a word
+	lw	$t9, ph2Poss($t9)	# current status for this char, init to 0
+	beq	$t9, $zero, gotPenUnk # 0 if unknown
+	la	$t7, penD
+	lw	$t5, ($t7)
+	sll	$t9, $t5, 2		# get a word
+	lw	$t9, ph2Poss($t9)	# current status for this char, init to 0
+	beq	$t9, $zero, gotPenUnk # 0 if unknown
+	# all are known, what?
+	j	error
+	
+gotPenUnk:
+	# Find the first unknown in the Field (t8 pointer, t6 digit)
+	la	$t8, fldA
+	lw	$t6, ($t8)
+	sll	$t9, $t6, 2		# get a word
+	lw	$t9, ph2Poss($t9)	# current status for this char, init to 0
+	beq	$t9, $zero, gotFldUnk # 0 if unknown
+	la	$t8, fldB
+	lw	$t6, ($t8)
+	sll	$t9, $t6, 2		# get a word
+	lw	$t9, ph2Poss($t9)	# current status for this char, init to 0
+	beq	$t9, $zero, gotFldUnk # 0 if unknown
+	la	$t8, fldC
+	lw	$t6, ($t8)
+	sll	$t9, $t6, 2		# get a word
+	lw	$t9, ph2Poss($t9)	# current status for this char, init to 0
+	beq	$t9, $zero, gotFldUnk # 0 if unknown
+	la	$t8, fldD
+	lw	$t6, ($t8)
+	sll	$t9, $t6, 2		# get a word
+	lw	$t9, ph2Poss($t9)	# current status for this char, init to 0
+	beq	$t9, $zero, gotFldUnk # 0 if unknown
+	# all are known, what?
+	j	error
+	
+gotFldUnk:
+	# Swap an unknown digit from the Field into the Pen
+	# $t7 = point to unknown in pen, $t8 = point to field
+	# $t5 = pen digit, $t6 = field digit
+	
 	# Save what they used to be so we can swap them back
 	sw	$t5, penSwapOut
 	sw	$t6, fldSwapOut
+	
+	# Save where they were so we know where to swap them back to
+	sw	$t7, penCurUnk
+	sw	$t8, fldCurUnk
 	
 	# Swap the unknown digits
 	sw	$t5, ($t8) # value from pen into field

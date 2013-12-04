@@ -27,8 +27,6 @@ mode:
 	.word 0 # Current mode within phase
 curguess:
 	.word 0 # Last submitted guess
-result:
-	.word 0 # Result of last submitted guess
 
 ## Phase 1 storage
 # 16 initial guesses (store by byte so we don't have to have nybble-size pointer)
@@ -90,6 +88,9 @@ fldB: .word 0
 fldC: .word 0
 fldD: .word 0
 
+## Phase 3 storage
+lastbulls: .word -1 # previous guess bull count
+
 ## Output messages from the computer. Partly for debugging, partly for entertainment.
 errortext:
 	.asciiz "\nART: I'm stumped. I give up!\n"
@@ -142,8 +143,27 @@ kibPh2oops:
 	.align 2
 
 kibPh3Wow:
-	.asciiz "ART: Hot dog, I've got four cows! But I don't know what to do with them.\n"
+	.asciiz "ART: Hot dog, I've got four cows! Just going to swap them now.\n"
 	.align 2
+kibPh3Equ:
+	.asciiz "ART: Neither of those is a Bull either way. Swapping with the other two.\nIt'll be a lot like starting over.\n"
+	.align 2
+kibPh3EquB:
+	.asciiz "ART: Swapped two for two, but still the same result. Will flip one now, betcha that works!\n"
+	.align 2
+kibPh3Inc1:
+	.asciiz "ART: One more Bull. Let's try an overlapping set.\n"
+	.align 2
+kibPh3Inc2:
+	.asciiz "ART: Two known Bulls! When I flip the other two, I'll have four!\n"
+	.align 2
+kibPh3Dec1:
+	.asciiz "ART: One less Bull. I'll swap back, then try an overlapping set.\n"
+	.align 2
+kibPh3Dec2:
+	.asciiz "ART: Those two were already Bulls! When I flip the other two, I'll have four!\n"
+	.align 2
+
 .text
 
 #.globl cpuguess
@@ -161,9 +181,6 @@ cpuguess:
 	lw	$s1, phase
 	beq	$s1, $zero, firstguess	# no previous guess
 	
-	# Store result of previous guess and get cattle count
-	sw	$a0, result		# Result of last guess
-
 	lw	$s3, curguess		# Last guess made
 	andi	$t8, $a0, 0x00F0
 	srl	$t8, $t8, 4		# bulls (in $t8 for use by Phase 4)
@@ -300,7 +317,7 @@ phase1play:
 	# we want to end up with our next guess in $s0
 	add	$s0, $zero, $zero	# init guess
 	add	$t7, $zero, $zero	# init counter
-	addi	$t8, $zero, 0xFF	# catch out of bounds error
+	addi	$t8, $zero, -1	# catch out of bounds error
 
 	# Get our next digit
 	lw	$s2, digitoffset # get the next digit in the list
@@ -643,12 +660,205 @@ ph2guess:
 	add	$v0, $t8, $zero
 	j guessmade
 
+
 phase3check:
 	# Endgame: we have four Bovines, now we just need to line them up!
+	# Mode tells what was swapped last.
+	# $s3 has guess, $t8 has bulls
+	
+	lw	$t0, lastbulls
+	blt	$t0, $zero, ph3init # -1 = initialize
+	sub	$t9, $t8, $t0	# get difference
+	
+	# Decrease?
+	beq	$t9, -2, ph3dec2
+	beq	$t9, -1, ph3dec1
+
+	# The increase sets our new baseline
+	sw	$t8, lastbulls
+	
+	beq	$t9, 1, ph3inc1
+	beq	$t9, 2, ph3inc2
+	# fall through to ph3equ
+
+ph3equ:
+	# Same bull as before
+	la $a0, kibPh3Equ
+	jal printText
+
+	# If we swapped and there was no change, then neither of these is a bull in either position
+	# We need to put both of these on the other side, and keep them there.
+	# Swap the sets to the other side is actually easy!
+	# ABCD becomes CDAB
+	srl	$t8, $s3, 8 # push left digits of $s3 right
+	sll	$t9, $s3, 8 # push right digits of $s3 left
+	or	$a1, $t8, $t9 # put them back together in $a1!
+	andi	$a1, $a1, 0xFFFF # mask out the extra bits
+
+	# This is our guess, but when we come back from it, pretend we're starting over.
+	# Then the first thing will be a simple flip (using the current mode)
+	addi	$t9, $zero, -1
+	sw	$t9, lastbulls
+	j	ph3guess
+
+ph3inc1:
+	# More bull than before
+	la $a0, kibPh3Inc1
+	jal printText
+
+	# Offset by one and swap again
+	addi	$a0, $a0, 1 # next
+	andi	$a0, $a0, 0x03 # 0-3 only
+	add	$a1, $zero, $s3	# what to swap
+	jal	swapBulls # sets $a1
+	
+	j	ph3guess	
+
+ph3inc2:
+	# Much more bull than before
+	la $a0, kibPh3Inc2
+	jal printText
+
+	# The two we swapped are now bulls
+	# Swap the other set, and we'll have 4
+	addi	$a0, $a0, 2 # other
+	andi	$a0, $a0, 0x03 # 0-3 only
+	add	$a1, $zero, $s3	# what to swap
+	jal	swapBulls # sets $a1
+
+	j	ph3guess
+
+ph3dec1:
+	# Less bull than before
+	la $a0, kibPh3Dec1
+	jal printText
+
+	# Swap back, offset by one, swap again
+	lw	$a0, mode 		# which set to swap
+	add	$a1, $zero, $s3	# what to swap
+	jal	swapBulls		# sets $a1
+	
+	addi	$a0, $a0, 1 # next
+	andi	$a0, $a0, 0x03 # 0-3 only
+	#add	$a1, $zero, $s3	# what to swap
+	jal	swapBulls # sets $a1
+	
+	j	ph3guess	
+
+ph3dec2:
+	# Much less bull than before
+	la $a0, kibPh3Dec2
+	jal printText
+
+	# Swap back and swap other set. That will get us 4.
+	lw	$a0, mode 		# which set to swap
+	add	$a1, $zero, $s3	# what to swap
+	jal	swapBulls		# sets $a1
+
+	addi	$a0, $a0, 2 # other
+	andi	$a0, $a0, 0x03 # 0-3 only
+	#add	$a1, $zero, $s3	# what to swap
+	jal	swapBulls # sets $a1
+	
+ph3init:
+	# How much bull do we have? Will be 0, 1, or 2.
 	la $a0, kibPh3Wow
 	jal printText
 
-	j error
+	sw	$t8, lastbulls
+	
+	# Start with mode 0, left
+	sw	$zero, mode
+	
+	lw	$a0, mode 		# which set to swap
+	add	$a1, $zero, $s3	# what to swap
+	jal	swapBulls		# sets $a1
+	
+	j	ph3guess
+
+swapBulls:
+	# Input:
+	# $a0 = Which set we're going to swap
+	#       0 = Left: A-B
+	#       1 = Middle: B-C
+	#       2 = Right: C-D
+	#       3 = Outside: D-A (= A-D)
+	# $a1 = The digits we're swapping (0xabcd)
+	# Output:
+	# $a1 = Set to reflect result
+
+	# use standard macro to save registers
+	push ($s0)
+	push ($s1)
+	push ($s5)
+	push ($s6)
+	push ($s7)
+
+	# $s0 = Digit 1, $s1 = Digit 2
+	# $s5 = unaffected digits
+	# $s6 = Digit 1 mask, $s7 = Digit 2 mask (after move)
+	
+	# $s0 = Shift $a1 one digit right, circular
+	srl	$s0, $a1, 4
+	sll	$s7, $a1, 12
+	or	$s0, $s0, $s7
+	
+	# $s1 = Shift $a1 one digit left, circular
+	sll	$s1, $a1, 4
+	srl	$s7, $a1, 12
+	or	$s1, $s1, $s7
+
+	# Mask out what we don't need
+	beq	$a0, $zero, mask0
+	beq	$a0, 1, mask1
+	beq	$a0, 2, mask2
+mask3:
+	#       3 = Outside: D-A (= A-D)
+	addi	$s5, $zero, 0x0FF0
+	addi	$s6, $zero, 0x000F
+	addi	$s7, $zero, 0xF000
+	j	unmask
+mask2:
+	#       2 = Right: C-D
+	addi	$s5, $zero, 0xFF00
+	addi	$s6, $zero, 0x00F0
+	addi	$s7, $zero, 0x000F
+	j	unmask
+mask1:
+	#       1 = Middle: B-C
+	addi	$s5, $zero, 0xF00F
+	addi	$s6, $zero, 0x0F00
+	addi	$s7, $zero, 0x00F0
+	j	unmask
+mask0:
+	#       0 = Left: A-B
+	addi	$s5, $zero, 0x00FF
+	addi	$s6, $zero, 0xF000
+	addi	$s7, $zero, 0x0F00
+	j	unmask
+unmask:
+	# Mask out everything we don't want
+	and	$a1, $a1, $s5 # unaffected digits
+	and	$s1, $s1, $s6 # first swap digit
+	and	$s0, $s0, $s7 # second swap digit
+	# Put them back together!
+	or	$a1, $a1, $s0
+	or	$a1, $a1, $s1
+	
+	# use standard macro to restore registers
+	pop ($s7)
+	pop ($s6)
+	pop ($s5)
+	pop ($s1)
+	pop ($s0)
+
+	jr	$ra
+
+ph3guess:
+	# We always swapped something, so it's in $a1
+	add	$v0, $a1, $zero
+	j	guessmade
+	
 
 # returns
 
